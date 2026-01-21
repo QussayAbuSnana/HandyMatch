@@ -4,7 +4,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   return (
     <div>
       <UserNav />
-      <div className="p-6">{children}</div>
+      <main className="p-6">{children}</main>
     </div>
   );
 }

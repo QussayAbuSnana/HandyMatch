@@ -1,3 +1,8 @@
 export default function ProJobs() {
-  return <h1 className="text-2xl font-bold">Jobs Requests</h1>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Jobs</h1>
+      <p className="text-slate-600">Job requests (placeholder)</p>
+    </div>
+  );
 }

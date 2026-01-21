@@ -1,3 +1,8 @@
 export default function ProServices() {
-  return <h1 className="text-2xl font-bold">My Services</h1>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Services</h1>
+      <p className="text-slate-600">Manage services (placeholder)</p>
+    </div>
+  );
 }

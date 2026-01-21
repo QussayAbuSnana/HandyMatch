@@ -1,3 +1,8 @@
 export default function UserProfile() {
-  return <h1 className="text-2xl font-bold">User Profile</h1>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Profile</h1>
+      <p className="text-slate-600">User profile (placeholder)</p>
+    </div>
+  );
 }

@@ -1,3 +1,8 @@
 export default function UserDashboard() {
-  return <h1 className="text-2xl font-bold">User Dashboard</h1>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">User Dashboard</h1>
+      <p className="text-slate-600">TEMP user UI</p>
+    </div>
+  );
 }

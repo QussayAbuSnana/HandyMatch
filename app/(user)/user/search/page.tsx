@@ -1,3 +1,8 @@
 export default function UserSearch() {
-  return <h1 className="text-2xl font-bold">Search Professionals</h1>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Search</h1>
+      <p className="text-slate-600">Search professionals (placeholder)</p>
+    </div>
+  );
 }
