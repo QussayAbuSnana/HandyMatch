@@ -84,10 +84,13 @@ export default function ProJobsPage() {
 
           <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
 
-          <button className="relative text-gray-600 transition hover:text-gray-900">
+          <Link
+            href="/pro/notifications"
+            className="relative text-gray-600 transition hover:text-gray-900"
+          >
             <Bell className="h-8 w-8" />
             <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
-          </button>
+          </Link>
         </div>
       </header>
 

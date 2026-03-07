@@ -104,10 +104,13 @@ export default function ProfessionalDashboardPage() {
             <span className="text-2xl font-bold text-violet-600">HandyMatch Pro</span>
           </div>
 
-          <button className="relative text-gray-600 transition hover:text-gray-900">
-            <Bell className="h-8 w-8" />
-            <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
-          </button>
+          <Link
+          href="/pro/notifications"
+          className="relative text-gray-600 transition hover:text-gray-900"
+        >
+          <Bell className="h-8 w-8" />
+          <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
+        </Link>
         </div>
       </header>
 
