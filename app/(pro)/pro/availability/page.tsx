@@ -1,8 +1,7 @@
-export default function ProAvailability() {
+export default function ProAvailabilityPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Availability</h1>
-      <p className="text-slate-600">Set availability (placeholder)</p>
-    </div>
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold">Professional Availability Page</h1>
+    </main>
   );
 }

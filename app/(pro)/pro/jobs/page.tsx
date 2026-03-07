@@ -1,8 +1,7 @@
-export default function ProJobs() {
+export default function ProJobsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Jobs</h1>
-      <p className="text-slate-600">Job requests (placeholder)</p>
-    </div>
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold">Professional Jobs Page</h1>
+    </main>
   );
 }
