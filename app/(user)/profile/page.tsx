@@ -1,8 +1,7 @@
-export default function UserProfile() {
+export default function ProfilePage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Profile</h1>
-      <p className="text-slate-600">User profile (placeholder)</p>
-    </div>
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold">Profile Page</h1>
+    </main>
   );
 }
