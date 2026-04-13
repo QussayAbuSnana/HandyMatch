@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 import {
   Bell,
   Menu,
@@ -89,6 +92,9 @@ const todayJobs = [
 ];
 
 export default function ProfessionalDashboardPage() {
+  const { userProfile } = useAuth();
+  const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
+
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
@@ -117,7 +123,7 @@ export default function ProfessionalDashboardPage() {
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-6 text-white">
         <div className="mx-auto max-w-7xl">
           <p className="mb-3 text-xl font-medium text-white/90">
-            Welcome back, Mike 👋
+            Welcome back, {firstName}!
           </p>
 
           <h1 className="mb-3 text-4xl font-extrabold md:text-6xl">

@@ -1,24 +1,32 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Briefcase, CheckCircle2, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { UserRole } from "@/lib/types";
 
-/**
- * Role Selection Page
- * Displays after successful login to allow user to choose their interface.
- */
 export default function RoleSelectionPage() {
-  const [showToast, setShowToast] = useState(true);
+  const { user, userProfile, loading, updateUserRole } = useAuth();
   const router = useRouter();
 
-  // Automatically hide the "Welcome back" toast after 5 seconds
+  // If the user already has a role, skip this page entirely
   useEffect(() => {
-    const timer = setTimeout(() => setShowToast(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      if (userProfile?.role === "customer") {
+        router.replace("/dashboard");
+      } else if (userProfile?.role === "professional") {
+        router.replace("/pro/dashboard");
+      }
+    }
+  }, [loading, user, userProfile, router]);
 
-  const handleRoleSelect = (role: "customer" | "professional") => {
+  const handleRoleSelect = async (role: UserRole) => {
+    await updateUserRole(role);
     if (role === "customer") {
       router.push("/dashboard");
     } else {
@@ -26,28 +34,38 @@ export default function RoleSelectionPage() {
     }
   };
 
+  // Show spinner while resolving auth state or redirecting
+  if (loading || !user || userProfile?.role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500">
+        <div className="h-12 w-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-4 font-sans relative overflow-hidden">
-      {showToast && (
-        <div className="fixed top-8 z-50 flex items-center bg-[#f0fff4] border border-green-100 rounded-2xl px-6 py-4 shadow-2xl animate-in fade-in slide-in-from-top-8 duration-700 ease-out">
-          <div className="bg-green-500 rounded-full p-1 mr-4">
-            <CheckCircle2 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="text-[#065f46] font-bold text-base">Welcome back!</p>
-            <p className="text-[#059669] text-sm">
-              You've successfully signed in.
-            </p>
-          </div>
+      {/* Welcome toast */}
+      <div className="fixed top-8 z-50 flex items-center bg-[#f0fff4] border border-green-100 rounded-2xl px-6 py-4 shadow-2xl animate-in fade-in slide-in-from-top-8 duration-700 ease-out">
+        <div className="bg-green-500 rounded-full p-1 mr-4">
+          <CheckCircle2 className="w-5 h-5 text-white" />
         </div>
-      )}
+        <div>
+          <p className="text-[#065f46] font-bold text-base">
+            Welcome, {userProfile?.displayName || "there"}!
+          </p>
+          <p className="text-[#059669] text-sm">
+            You&apos;ve successfully signed in.
+          </p>
+        </div>
+      </div>
 
       <div className="text-center mb-12 animate-in fade-in zoom-in duration-1000">
         <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">
           HandyMatch
         </h1>
         <p className="text-blue-100 text-xl font-medium opacity-90">
-          Your trusted service marketplace
+          How will you use HandyMatch?
         </p>
       </div>
 
@@ -62,7 +80,7 @@ export default function RoleSelectionPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                I'm a Customer
+                I&apos;m a Customer
               </h2>
               <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">
                 Find and book trusted professionals for your home services
@@ -84,7 +102,7 @@ export default function RoleSelectionPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                I'm a Professional
+                I&apos;m a Professional
               </h2>
               <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">
                 Manage your business and connect with customers

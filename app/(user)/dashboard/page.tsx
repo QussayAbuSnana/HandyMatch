@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Bell,
@@ -11,13 +13,13 @@ import {
   User,
   Sparkles,
   Check,
-  Wrench,
   Droplets,
   Zap,
   Hammer,
   Paintbrush,
   TrendingUp,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 const categories = [
   {
@@ -111,6 +113,9 @@ const benefits = [
 ];
 
 export default function CustomerDashboardPage() {
+  const { userProfile } = useAuth();
+  const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
+
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
@@ -137,7 +142,7 @@ export default function CustomerDashboardPage() {
         <div className="mx-auto max-w-7xl">
           <p className="mb-3 flex items-center gap-2 text-xl font-medium text-white/90">
             <Sparkles className="h-5 w-5 text-yellow-300" />
-            Welcome to HandyMatch
+            Welcome back, {firstName}!
           </p>
 
           <h1 className="mb-3 text-4xl font-extrabold md:text-6xl">
