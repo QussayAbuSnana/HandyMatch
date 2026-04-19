@@ -33,7 +33,7 @@ interface AuthContextValue {
   userProfile: UserProfile | null;
   /** True while the initial auth state is being resolved */
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (
     email: string,
     password: string,
@@ -59,41 +59,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (snap.exists()) {
       setUserProfile(snap.data() as UserProfile);
     } else {
-      // First time — create a minimal profile
-      const profile: Omit<UserProfile, "createdAt"> & {
-        createdAt: ReturnType<typeof serverTimestamp>;
-      } = {
+      // First time — build profile locally, write it, set state immediately (no second read)
+      const newProfile: UserProfile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? "",
         displayName: firebaseUser.displayName ?? "",
         role: null,
         photoURL: firebaseUser.photoURL ?? undefined,
-        createdAt: serverTimestamp() as ReturnType<typeof serverTimestamp>,
+        createdAt: serverTimestamp() as unknown as import("firebase/firestore").Timestamp,
       };
-      await setDoc(ref, profile);
-      // Re-fetch so we get the server timestamp
-      const fresh = await getDoc(ref);
-      setUserProfile(fresh.data() as UserProfile);
+      await setDoc(ref, newProfile);
+      setUserProfile(newProfile);
     }
   }, []);
 
   // Listen to Firebase Auth state
   useEffect(() => {
+    // Safety timeout — if Firebase doesn't respond in 5s, stop loading
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
-        await fetchUserProfile(firebaseUser);
+        try {
+          await fetchUserProfile(firebaseUser);
+        } catch {
+          // Firestore not enabled yet — auth still works
+        }
       } else {
         setUserProfile(null);
       }
       setLoading(false);
     });
-    return unsubscribe;
+
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, [fetchUserProfile]);
 
-  const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged will handle fetching the profile
+  const login = async (email: string, password: string): Promise<User> => {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    return credential.user;
   };
 
   const register = async (
@@ -128,9 +136,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserRole = async (role: UserRole) => {
     if (!user) return;
-    const ref = doc(db, "users", user.uid);
-    await updateDoc(ref, { role });
+    // Update local state immediately so the UI reacts right away
     setUserProfile((prev) => (prev ? { ...prev, role } : prev));
+    // Try to persist to Firestore — silently ignore if not available yet
+    try {
+      const ref = doc(db, "users", user.uid);
+      await setDoc(ref, { role }, { merge: true });
+    } catch {
+      // Firestore not set up — role is held in memory for this session
+    }
   };
 
   const resetPassword = async (email: string) => {

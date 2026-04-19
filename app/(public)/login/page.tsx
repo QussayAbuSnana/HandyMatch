@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Wrench } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 function getFirebaseErrorMessage(code: string): string {
   switch (code) {
@@ -44,11 +46,25 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await login(email, password);
-      // After login, redirect based on role (if already set) or role selection
-      // We read the profile that was just loaded by the auth context
-      // Give the context a tick to update userProfile before reading it
-      router.push("/");
+      const credential = await login(email, password);
+
+      // Try to read role from Firestore for a direct redirect
+      // If Firestore fails for any reason, fall back to "/" which handles the redirect
+      let role: string | null = null;
+      try {
+        const snap = await getDoc(doc(db, "users", credential.uid));
+        role = snap.exists() ? snap.data().role : null;
+      } catch {
+        // Firestore unavailable — "/" will handle the redirect
+      }
+
+      if (role === "customer") {
+        router.push("/dashboard");
+      } else if (role === "professional") {
+        router.push("/pro/dashboard");
+      } else {
+        router.push("/");
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
