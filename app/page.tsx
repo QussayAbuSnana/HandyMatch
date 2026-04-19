@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Briefcase, CheckCircle2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -25,8 +25,9 @@ export default function RoleSelectionPage() {
     }
   }, [loading, user, userProfile, router]);
 
-  const handleRoleSelect = async (role: UserRole) => {
-    await updateUserRole(role);
+  const handleRoleSelect = (role: UserRole) => {
+    // Update role in state (and Firestore in background) then redirect immediately
+    updateUserRole(role);
     if (role === "customer") {
       router.push("/dashboard");
     } else {
@@ -34,14 +35,20 @@ export default function RoleSelectionPage() {
     }
   };
 
-  // Show spinner while resolving auth state or redirecting
-  if (loading || !user || userProfile?.role) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500">
-        <div className="h-12 w-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
-      </div>
-    );
-  }
+  const spinner = (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500">
+      <div className="h-12 w-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+    </div>
+  );
+
+  // Still resolving Firebase auth state
+  if (loading) return spinner;
+
+  // No user → useEffect is redirecting to /login
+  if (!user) return spinner;
+
+  // User has a role → useEffect is redirecting to their dashboard
+  if (userProfile?.role === "customer" || userProfile?.role === "professional") return spinner;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-4 font-sans relative overflow-hidden">

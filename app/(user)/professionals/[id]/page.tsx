@@ -1,287 +1,214 @@
+"use client";
+
+import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Star,
-  MapPin,
-  Clock3,
-  Shield,
-  MessageSquare,
-  CalendarDays,
-  CheckCircle2,
-  Briefcase,
-  Award,
-} from "lucide-react";
+import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { getUserProfile, createBooking, getOrCreateConversation } from "@/lib/firestore";
+import { UserProfile } from "@/lib/types";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
+type Props = { params: Promise<{ id: string }> };
 
-const professionals: Record<
-  string,
-  {
-    name: string;
-    title: string;
-    rating: number;
-    reviews: number;
-    location: string;
-    distance: string;
-    availability: string;
-    price: string;
-    completedJobs: string;
-    experience: string;
-    image: string;
-    bio: string;
-    services: string[];
-    highlights: string[];
+export default function ProfessionalDetailPage({ params }: Props) {
+  const { id } = use(params);
+  const { user, userProfile } = useAuth();
+  const router = useRouter();
+
+  const [pro, setPro] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [booking, setBooking] = useState(false);
+  const [booked, setBooked] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getUserProfile(id)
+      .then(setPro)
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const proData = pro as unknown as {
+    bio?: string; services?: string[]; hourlyRate?: number;
+    rating?: number; reviewCount?: number; jobCount?: number;
+    location?: string; isAvailable?: boolean;
+  };
+
+  const handleBook = async () => {
+    if (!user || !userProfile || !pro) return;
+    setBooking(true);
+    setError("");
+    try {
+      await createBooking({
+        customerId: user.uid,
+        professionalId: pro.uid,
+        customerName: userProfile.displayName,
+        professionalName: pro.displayName,
+        service: proData.services?.[0] ?? "General Service",
+        status: "pending",
+        scheduledAt: null as unknown as import("firebase/firestore").Timestamp,
+        location: userProfile.location ?? "TBD",
+        price: proData.hourlyRate ?? 0,
+        notes: "",
+      });
+      setBooked(true);
+    } catch {
+      setError("Failed to send booking request. Please try again.");
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!user || !userProfile || !pro) return;
+    const convId = await getOrCreateConversation(
+      user.uid, pro.uid,
+      userProfile.displayName, pro.displayName
+    );
+    router.push(`/messages/${convId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f8fb]">
+        <div className="h-12 w-12 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
+      </div>
+    );
   }
-> = {
-  "sarah-chen": {
-    name: "Sarah Chen",
-    title: "Certified Electrician",
-    rating: 5,
-    reviews: 94,
-    location: "Midtown",
-    distance: "2.1 km away",
-    availability: "Available within 30 min",
-    price: "$95/hour",
-    completedJobs: "256 jobs completed",
-    experience: "7 years experience",
-    image:
-      "https://images.unsplash.com/photo-1598257006626-5b54c8d0fa7f?auto=format&fit=crop&w=800&q=80",
-    bio: "Experienced electrician specializing in residential wiring, lighting systems, smart home setup, and fast emergency fixes.",
-    services: [
-      "Electrical wiring",
-      "Smart lighting installation",
-      "Power outlet repair",
-      "Circuit troubleshooting",
-    ],
-    highlights: ["Verified professional", "Fast response", "Top rated this week"],
-  },
-  "mike-johnson": {
-    name: "Mike Johnson",
-    title: "Professional Plumber",
-    rating: 4.9,
-    reviews: 127,
-    location: "Downtown",
-    distance: "1.2 km away",
-    availability: "Available within 1 hour",
-    price: "$85/hour",
-    completedJobs: "342 jobs completed",
-    experience: "9 years experience",
-    image:
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80",
-    bio: "Reliable plumber focused on repairs, installations, leak detection, and urgent maintenance for kitchens and bathrooms.",
-    services: [
-      "Sink repair",
-      "Leak detection",
-      "Pipe installation",
-      "Bathroom maintenance",
-    ],
-    highlights: ["Verified professional", "Highly recommended", "Same-day service"],
-  },
-  "lisa-thompson": {
-    name: "Lisa Thompson",
-    title: "Interior Painter",
-    rating: 4.9,
-    reviews: 89,
-    location: "Westside",
-    distance: "1.8 km away",
-    availability: "Available within 3 hours",
-    price: "$65/hour",
-    completedJobs: "198 jobs completed",
-    experience: "5 years experience",
-    image:
-      "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
-    bio: "Detail-oriented painter delivering clean interior and exterior finishes, wall touch-ups, and color consultation.",
-    services: [
-      "Interior painting",
-      "Exterior painting",
-      "Wall touch-ups",
-      "Color consultation",
-    ],
-    highlights: ["Verified professional", "Clean finishing", "Affordable pricing"],
-  },
-};
 
-export default async function ProfessionalDetailsPage({ params }: Props) {
-  const { id } = await params;
-  const professional = professionals[id] ?? professionals["mike-johnson"];
+  if (!pro) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f8fb] gap-4">
+        <p className="text-2xl font-semibold text-slate-600">Professional not found.</p>
+        <Link href="/search" className="text-violet-600 font-bold hover:underline">Back to Search</Link>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#f8f8fb] pb-10">
-      <section className="relative">
-        <div className="h-72 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 md:h-80" />
-
-        <div className="absolute left-5 right-5 top-5 mx-auto flex max-w-6xl items-center justify-between">
-          <Link
-            href="/search"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white"
-          >
-            <ArrowLeft className="h-6 w-6" />
+    <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
+          <Link href="/search" className="text-gray-600 transition hover:text-gray-900">
+            <ArrowLeft className="h-8 w-8" />
           </Link>
-
-          <div className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-md">
-            Professional Details
-          </div>
+          <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
+          <div className="w-8" />
         </div>
+      </header>
 
-        <div className="relative mx-auto -mt-24 max-w-6xl px-5">
-          <div className="overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-lg">
-            <div className="grid gap-0 md:grid-cols-[320px_1fr]">
-              <div className="bg-slate-100">
-                <img
-                  src={professional.image}
-                  alt={professional.name}
-                  className="h-full min-h-[320px] w-full object-cover"
-                />
-              </div>
-
-              <div className="p-6 md:p-8">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {professional.highlights.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full bg-violet-100 px-3 py-1 text-sm font-semibold text-violet-700"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-
-                    <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">
-                      {professional.name}
-                    </h1>
-
-                    <p className="mt-2 text-xl font-medium text-violet-600">
-                      {professional.title}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[1.5rem] bg-violet-50 px-5 py-4 text-right">
-                    <div className="text-3xl font-extrabold text-violet-700">
-                      {professional.price}
-                    </div>
-                    <div className="mt-1 text-sm text-slate-500">Starting price</div>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
-                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-4">
-                    <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {professional.rating} ({professional.reviews} reviews)
-                      </div>
-                      <div className="text-sm text-slate-500">Customer rating</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-4">
-                    <MapPin className="h-6 w-6 text-slate-500" />
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {professional.location}
-                      </div>
-                      <div className="text-sm text-slate-500">{professional.distance}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-4">
-                    <Clock3 className="h-6 w-6 text-slate-500" />
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {professional.availability}
-                      </div>
-                      <div className="text-sm text-slate-500">Availability status</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-4">
-                    <Briefcase className="h-6 w-6 text-slate-500" />
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {professional.completedJobs}
-                      </div>
-                      <div className="text-sm text-slate-500">{professional.experience}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-6 text-lg leading-8 text-slate-600">
-                  {professional.bio}
-                </p>
-
-                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                  <Link
-                    href="/messages"
-                    className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-violet-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-violet-700"
-                  >
-                    <MessageSquare className="h-5 w-5" />
-                    Message
-                  </Link>
-
-                  <Link
-                    href={`/request/create?pro=${id}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-green-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-green-700"
-                  >
-                    <CalendarDays className="h-5 w-5" />
-                    Book Service
-                  </Link>
-                </div>
-              </div>
+      {/* Hero */}
+      <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-8 text-white">
+        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center gap-8">
+          <div className="relative">
+            <div className="h-32 w-32 rounded-[2rem] bg-white/20 flex items-center justify-center text-white text-5xl font-bold shadow-lg">
+              {pro.displayName?.[0] ?? "?"}
+            </div>
+            <div className="absolute -right-2 -top-2 flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 shadow-md">
+              <Shield className="h-5 w-5 text-white" />
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="mx-auto mt-8 max-w-6xl px-5">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                <Award className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900">Services Offered</h2>
+          <div className="text-center md:text-left">
+            <h2 className="text-4xl font-extrabold">{pro.displayName}</h2>
+            <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-2">
+              {proData.services?.map((s) => (
+                <span key={s} className="rounded-full bg-white/20 px-4 py-1 text-lg font-medium">{s}</span>
+              ))}
             </div>
-
-            <div className="flex flex-wrap gap-3">
-              {professional.services.map((service) => (
-                <span
-                  key={service}
-                  className="rounded-full bg-slate-100 px-4 py-2 text-base font-medium text-slate-700"
-                >
-                  {service}
+            <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-6 text-lg text-white/90">
+              {proData.rating && (
+                <span className="flex items-center gap-2">
+                  <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />
+                  {proData.rating.toFixed(1)} ({proData.reviewCount ?? 0} reviews)
                 </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white">
-                <Shield className="h-6 w-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900">Trust & Quality</h2>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                "Verified professional identity",
-                "Transparent service pricing",
-                "Fast response and booking flow",
-                "Rated by previous customers",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  <span className="text-lg text-slate-700">{item}</span>
-                </div>
-              ))}
+              )}
+              {proData.location && (
+                <span className="flex items-center gap-2"><MapPin className="h-5 w-5" />{proData.location}</span>
+              )}
+              <span className="flex items-center gap-2">
+                <Clock3 className="h-5 w-5" />
+                {proData.isAvailable ? "Available now" : "Unavailable"}
+              </span>
             </div>
           </div>
         </div>
       </section>
+
+      <div className="mx-auto max-w-7xl px-5 space-y-5 pt-6">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { icon: Star, label: "Rating", value: proData.rating?.toFixed(1) ?? "New", color: "text-amber-500 bg-amber-50" },
+            { icon: Briefcase, label: "Jobs Done", value: proData.jobCount ?? 0, color: "text-violet-600 bg-violet-50" },
+            { icon: CheckCircle2, label: "Reviews", value: proData.reviewCount ?? 0, color: "text-emerald-600 bg-emerald-50" },
+          ].map((s) => {
+            const Icon = s.icon;
+            return (
+              <div key={s.label} className="rounded-[1.5rem] border border-gray-200 bg-white p-5 text-center shadow-sm">
+                <div className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl ${s.color}`}>
+                  <Icon className="h-7 w-7" />
+                </div>
+                <div className="text-3xl font-extrabold text-slate-900">{s.value}</div>
+                <div className="mt-1 text-lg text-slate-500">{s.label}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bio */}
+        {proData.bio && (
+          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">About</h3>
+            <p className="text-xl text-slate-600 leading-relaxed">{proData.bio}</p>
+          </div>
+        )}
+
+        {/* Services */}
+        {proData.services && proData.services.length > 0 && (
+          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-2xl font-bold text-slate-900 mb-4">Services</h3>
+            <div className="flex flex-wrap gap-3">
+              {proData.services.map((s) => (
+                <span key={s} className="rounded-full border border-violet-200 bg-violet-50 px-5 py-2 text-lg font-medium text-violet-700">{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Booking success */}
+        {booked && (
+          <div className="rounded-[2rem] border border-green-200 bg-green-50 p-6 text-center shadow-sm">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-3" />
+            <p className="text-2xl font-bold text-green-800">Booking Request Sent!</p>
+            <p className="mt-2 text-lg text-green-700">{pro.displayName} will respond shortly.</p>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-center text-red-600 text-lg">{error}</p>
+        )}
+
+        {/* Actions */}
+        {!booked && (
+          <div className="flex gap-4">
+            <button
+              onClick={handleMessage}
+              className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] border border-gray-200 bg-white px-6 py-5 text-xl font-semibold text-slate-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <MessageSquare className="h-6 w-6" />Message
+            </button>
+            <button
+              onClick={handleBook}
+              disabled={booking}
+              className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] bg-violet-600 px-6 py-5 text-xl font-bold text-white shadow-lg transition hover:bg-violet-700 disabled:opacity-60"
+            >
+              <CalendarDays className="h-6 w-6" />
+              {booking ? "Sending…" : `Book · $${proData.hourlyRate ?? "—"}/hr`}
+            </button>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
