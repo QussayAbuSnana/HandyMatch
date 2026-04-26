@@ -42,6 +42,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   updateUserRole: (role: UserRole) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Re-fetch the Firestore profile so context reflects recent edits */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -151,6 +153,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    try {
+      await fetchUserProfile(user);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -162,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         updateUserRole,
         resetPassword,
+        refreshProfile,
       }}
     >
       {children}

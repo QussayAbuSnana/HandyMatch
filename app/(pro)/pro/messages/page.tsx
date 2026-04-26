@@ -6,6 +6,7 @@ import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User } from "lucide
 import { useAuth } from "@/lib/auth-context";
 import { subscribeConversations } from "@/lib/firestore";
 import { Conversation } from "@/lib/types";
+import ProSideMenu from "@/components/shared/ProSideMenu";
 
 function timeAgo(ts: unknown): string {
   if (!ts) return "";
@@ -19,6 +20,7 @@ function timeAgo(ts: unknown): string {
 
 export default function ProMessagesPage() {
   const { user } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   useEffect(() => {
@@ -29,9 +31,10 @@ export default function ProMessagesPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <ProSideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600"><Menu className="h-8 w-8" /></button>
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600"><Menu className="h-8 w-8" /></button>
           <h1 className="text-3xl font-bold text-slate-900">Messages</h1>
           <Link href="/pro/notifications" className="relative text-gray-600">
             <Bell className="h-8 w-8" />

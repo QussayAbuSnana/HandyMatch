@@ -9,6 +9,7 @@ import {
   ArrowRight, CalendarDays, Hammer, DollarSign,
 } from "lucide-react";
 import { subscribeProBookings } from "@/lib/firestore";
+import ProSideMenu from "@/components/shared/ProSideMenu";
 import { Booking } from "@/lib/types";
 
 function isToday(b: Booking): boolean {
@@ -38,6 +39,7 @@ export default function ProfessionalDashboardPage() {
   const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
   const proData = userProfile as unknown as { rating?: number; reviewCount?: number };
 
+  const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,9 +67,10 @@ export default function ProfessionalDashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <ProSideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600 transition hover:text-gray-900">
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900">
             <Menu className="h-8 w-8" />
           </button>
           <div className="flex items-center gap-3">

@@ -1,22 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Phone, MapPin, Save } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, MapPin, Save, Camera } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
+import { uploadProfilePhoto } from "@/lib/storage";
+import { updateProfile } from "firebase/auth";
 
 export default function EditProfilePage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName ?? "");
   const [phone, setPhone] = useState(userProfile?.phone ?? "");
   const [location, setLocation] = useState(userProfile?.location ?? "");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(userProfile?.photoURL ?? null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +36,37 @@ export default function EditProfilePage() {
     if (!displayName.trim()) { setError("Name is required."); return; }
     setError("");
     setSaving(true);
+
+    // Step 1: Always save text fields first (name, phone, location)
     try {
+      await updateProfile(user, { displayName: displayName.trim() });
       await updateUserProfile(user.uid, {
         displayName: displayName.trim(),
         phone: phone.trim(),
         location: location.trim(),
       });
-      setSaved(true);
-      setTimeout(() => router.push("/profile"), 1000);
     } catch {
-      setError("Failed to save changes. Please try again.");
-    } finally {
+      setError("Failed to save profile details. Please try again.");
       setSaving(false);
+      return;
     }
+
+    // Step 2: Try to upload photo — show a separate error if it fails
+    if (photoFile) {
+      try {
+        await uploadProfilePhoto(user, photoFile);
+      } catch {
+        setError("Profile details saved, but photo upload failed. Check Firebase Storage rules.");
+        await refreshProfile();
+        setSaving(false);
+        return;
+      }
+    }
+
+    await refreshProfile();
+    setSaved(true);
+    setSaving(false);
+    setTimeout(() => router.push("/profile"), 1000);
   };
 
   return (
@@ -51,11 +81,36 @@ export default function EditProfilePage() {
       </header>
 
       <section className="mx-auto max-w-lg px-5 pt-8">
-        {/* Avatar */}
-        <div className="mb-8 flex justify-center">
-          <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-5xl font-bold shadow-lg">
-            {displayName?.[0]?.toUpperCase() ?? <User className="h-12 w-12" />}
+        {/* Avatar with photo picker */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="relative">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-5xl font-bold shadow-lg overflow-hidden">
+              {photoPreview
+                ? <img src={photoPreview} alt="avatar" className="h-28 w-28 object-cover" />
+                : (displayName?.[0]?.toUpperCase() ?? <User className="h-12 w-12" />)}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-white shadow-md hover:bg-violet-700 transition"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-sm font-semibold text-violet-600 hover:underline"
+          >
+            Change photo
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="hidden"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import ProSideMenu from "@/components/shared/ProSideMenu";
 import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User, MapPin, Clock3, DollarSign, CheckCircle2, XCircle, Wrench, Star } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed } from "@/lib/firestore";
@@ -10,6 +11,7 @@ import ReviewModal from "@/components/shared/ReviewModal";
 
 export default function ProJobsPage() {
   const { user, userProfile } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
@@ -56,9 +58,10 @@ export default function ProJobsPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <ProSideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
           <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
           <Link href="/pro/notifications" className="relative text-gray-600 transition hover:text-gray-900">
             <Bell className="h-8 w-8" />
