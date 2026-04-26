@@ -1,25 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Menu,
-  Search,
-  MapPin,
-  Star,
-  Clock3,
-  Home,
-  MessageSquare,
-  User,
-  Sparkles,
-  Check,
-  Droplets,
-  Zap,
-  Hammer,
-  Paintbrush,
-  TrendingUp,
+  Menu, Search, MapPin, Star, Clock3,
+  Home, MessageSquare, User, Sparkles, Check,
+  Droplets, Zap, Hammer, Paintbrush, TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { getProfessionals } from "@/lib/firestore";
+import { UserProfile } from "@/lib/types";
 import { BellButton } from "@/components/shared/CustomerNavBar";
 import SideMenu from "@/components/shared/SideMenu";
 
@@ -54,47 +44,6 @@ const categories = [
   },
 ];
 
-const professionals = [
-  {
-    id: "sarah-chen",
-    name: "Sarah Chen",
-    rating: 5,
-    reviews: 94,
-    location: "Midtown",
-    distance: "2.1 km",
-    availability: "Within 30 min",
-    price: "$95",
-    jobs: "256 jobs",
-    image:
-      "https://images.unsplash.com/photo-1598257006626-5b54c8d0fa7f?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "mike-johnson",
-    name: "Mike Johnson",
-    rating: 4.9,
-    reviews: 127,
-    location: "Downtown",
-    distance: "1.2 km",
-    availability: "Within 1 hour",
-    price: "$85",
-    jobs: "342 jobs",
-    image:
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "lisa-thompson",
-    name: "Lisa Thompson",
-    rating: 4.9,
-    reviews: 89,
-    location: "Westside",
-    distance: "1.8 km",
-    availability: "Within 3 hours",
-    price: "$65",
-    jobs: "198 jobs",
-    image:
-      "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80",
-  },
-];
 
 const benefits = [
   {
@@ -118,6 +67,21 @@ export default function CustomerDashboardPage() {
   const { userProfile } = useAuth();
   const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [topPros, setTopPros] = useState<UserProfile[]>([]);
+
+  useEffect(() => {
+    getProfessionals().then((all) => {
+      // Sort by rating desc, take top 3
+      const sorted = [...all]
+        .filter((p) => (p as unknown as { rating?: number }).rating)
+        .sort((a, b) => {
+          const ra = (a as unknown as { rating: number }).rating;
+          const rb = (b as unknown as { rating: number }).rating;
+          return rb - ra;
+        });
+      setTopPros(sorted.slice(0, 3));
+    });
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
@@ -243,54 +207,56 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div className="space-y-4">
-          {professionals.map((pro) => (
-            <Link
-              key={pro.id}
-              href={`/professionals/${pro.id}`}
-              className="flex flex-col gap-5 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg md:flex-row md:items-center md:justify-between"
-            >
-              <div className="flex items-start gap-4">
-                <img
-                  src={pro.image}
-                  alt={pro.name}
-                  className="h-24 w-24 rounded-[1.5rem] object-cover"
-                />
-
-                <div className="pt-1">
-                  <h3 className="text-2xl font-bold text-slate-900">{pro.name}</h3>
-
-                  <div className="mt-2 flex items-center gap-2 text-lg text-slate-600">
-                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold text-slate-900">{pro.rating}</span>
-                    <span>({pro.reviews})</span>
+          {topPros.length === 0 ? (
+            <div className="rounded-[2rem] border border-gray-200 bg-white p-8 text-center text-xl text-slate-400 shadow-sm">
+              No professionals yet. Check back soon!
+            </div>
+          ) : (
+            topPros.map((pro) => {
+              const d = pro as unknown as { rating?: number; reviewCount?: number; hourlyRate?: number; location?: string; jobCount?: number; isAvailable?: boolean };
+              return (
+                <Link
+                  key={pro.uid}
+                  href={`/professionals/${pro.uid}`}
+                  className="flex flex-col gap-5 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg md:flex-row md:items-center md:justify-between"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-4xl font-bold shrink-0">
+                      {pro.displayName?.[0] ?? "?"}
+                    </div>
+                    <div className="pt-1">
+                      <h3 className="text-2xl font-bold text-slate-900">{pro.displayName}</h3>
+                      {d.rating ? (
+                        <div className="mt-2 flex items-center gap-2 text-lg text-slate-600">
+                          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold text-slate-900">{d.rating.toFixed(1)}</span>
+                          <span>({d.reviewCount ?? 0} reviews)</span>
+                        </div>
+                      ) : null}
+                      {d.location && (
+                        <div className="mt-2 flex items-center gap-2 text-lg text-slate-500">
+                          <MapPin className="h-5 w-5" />{d.location}
+                        </div>
+                      )}
+                      <div className="mt-1 flex items-center gap-2 text-lg text-slate-500">
+                        <Clock3 className="h-5 w-5" />
+                        {d.isAvailable ? "Available now" : "Unavailable"}
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="mt-2 flex items-center gap-2 text-lg text-slate-500">
-                    <MapPin className="h-5 w-5" />
-                    <span>
-                      {pro.location} • {pro.distance}
-                    </span>
+                  <div className="flex flex-row items-end justify-between md:flex-col md:items-end">
+                    <div className="text-right">
+                      <div className="text-4xl font-extrabold text-violet-600">${d.hourlyRate ?? "—"}</div>
+                      <div className="text-lg text-slate-500">/hour</div>
+                    </div>
+                    <div className="rounded-full bg-violet-50 px-4 py-2 text-lg font-semibold text-violet-600">
+                      {d.jobCount ?? 0} jobs
+                    </div>
                   </div>
-
-                  <div className="mt-1 flex items-center gap-2 text-lg text-slate-500">
-                    <Clock3 className="h-5 w-5" />
-                    <span>{pro.availability}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-row items-end justify-between md:flex-col md:items-end">
-                <div className="text-right">
-                  <div className="text-4xl font-extrabold text-violet-600">{pro.price}</div>
-                  <div className="text-lg text-slate-500">/hour</div>
-                </div>
-
-                <div className="rounded-full bg-violet-50 px-4 py-2 text-lg font-semibold text-violet-600">
-                  {pro.jobs}
-                </div>
-              </div>
-            </Link>
-          ))}
+                </Link>
+              );
+            })
+          )}
         </div>
       </section>
 

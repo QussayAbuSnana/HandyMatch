@@ -52,22 +52,27 @@ export default function ProProfilePage() {
       {/* Hero card */}
       <section className="mx-auto max-w-7xl px-5 pt-5">
         <div className="rounded-[2rem] bg-gradient-to-r from-violet-600 to-fuchsia-500 p-8 text-white shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-4xl font-bold">
-              {userProfile?.displayName?.[0] ?? "?"}
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-4xl font-bold">{userProfile?.displayName ?? "—"}</h2>
-                <BadgeCheck className="h-8 w-8 text-sky-300" />
+          <div className="flex items-center justify-between gap-5">
+            <div className="flex items-center gap-5">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-4xl font-bold">
+                {userProfile?.displayName?.[0] ?? "?"}
               </div>
-              <p className="mt-1 text-xl text-white/85">Pro since {memberSince}</p>
-              {pro.isAvailable !== undefined && (
-                <span className={`mt-2 inline-block rounded-full px-4 py-1 text-lg font-semibold ${pro.isAvailable ? "bg-green-400/30 text-green-100" : "bg-white/20 text-white/70"}`}>
-                  {pro.isAvailable ? "Available" : "Unavailable"}
-                </span>
-              )}
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-4xl font-bold">{userProfile?.displayName ?? "—"}</h2>
+                  <BadgeCheck className="h-8 w-8 text-sky-300" />
+                </div>
+                <p className="mt-1 text-xl text-white/85">Pro since {memberSince}</p>
+                {pro.isAvailable !== undefined && (
+                  <span className={`mt-2 inline-block rounded-full px-4 py-1 text-lg font-semibold ${pro.isAvailable ? "bg-green-400/30 text-green-100" : "bg-white/20 text-white/70"}`}>
+                    {pro.isAvailable ? "Available" : "Unavailable"}
+                  </span>
+                )}
+              </div>
             </div>
+            <Link href="/pro/setup" className="shrink-0 rounded-2xl border border-white/30 bg-white/15 px-4 py-2 text-lg font-semibold text-white hover:bg-white/25 transition">
+              Edit
+            </Link>
           </div>
 
           <div className="my-7 h-px bg-white/20" />

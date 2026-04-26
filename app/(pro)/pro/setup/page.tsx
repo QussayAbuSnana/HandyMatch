@@ -16,11 +16,18 @@ export default function ProSetupPage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
 
-  const [bio, setBio] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [location, setLocation] = useState("");
-  const [phone, setPhone] = useState("");
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const existing = userProfile as unknown as {
+    bio?: string; services?: string[]; hourlyRate?: number;
+    location?: string; phone?: string; isAvailable?: boolean;
+    rating?: number; reviewCount?: number; jobCount?: number;
+  };
+  const isEditing = !!(existing?.services?.length);
+
+  const [bio, setBio] = useState(existing?.bio ?? "");
+  const [hourlyRate, setHourlyRate] = useState(existing?.hourlyRate ? String(existing.hourlyRate) : "");
+  const [location, setLocation] = useState(existing?.location ?? "");
+  const [phone, setPhone] = useState(existing?.phone ?? "");
+  const [selectedServices, setSelectedServices] = useState<string[]>(existing?.services ?? []);
   const [customService, setCustomService] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -60,12 +67,10 @@ export default function ProSetupPage() {
         hourlyRate: Number(hourlyRate),
         location,
         phone,
-        rating: 0,
-        reviewCount: 0,
-        jobCount: 0,
-        isAvailable: true,
+        // Only set defaults on first setup
+        ...(isEditing ? {} : { rating: 0, reviewCount: 0, jobCount: 0, isAvailable: true }),
       } as Parameters<typeof updateUserProfile>[1]);
-      router.push("/pro/dashboard");
+      router.push(isEditing ? "/pro/profile" : "/pro/dashboard");
     } catch {
       setError("Failed to save profile. Please try again.");
     } finally {
@@ -81,9 +86,9 @@ export default function ProSetupPage() {
           <div className="bg-white p-3 rounded-2xl shadow-lg mb-4 inline-flex">
             <Hammer className="w-8 h-8 text-violet-600" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Set Up Your Profile</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">{isEditing ? "Edit Your Profile" : "Set Up Your Profile"}</h1>
           <p className="text-violet-100 text-lg">
-            Welcome, {userProfile?.displayName?.split(" ")[0]}! Tell customers about yourself.
+            {isEditing ? "Update your services, rate, and details." : `Welcome, ${userProfile?.displayName?.split(" ")[0]}! Tell customers about yourself.`}
           </p>
         </div>
 
@@ -199,7 +204,7 @@ export default function ProSetupPage() {
             disabled={saving}
             className="w-full py-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white font-bold rounded-2xl shadow-lg hover:opacity-95 transition text-lg disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Complete Setup →"}
+            {saving ? "Saving…" : isEditing ? "Save Changes" : "Complete Setup →"}
           </button>
         </form>
       </div>
