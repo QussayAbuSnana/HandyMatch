@@ -63,7 +63,7 @@ export default function LoginPage() {
       } else if (role === "professional") {
         router.push("/pro/dashboard");
       } else {
-        router.push("/");
+        router.push("/select-role");
       }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";

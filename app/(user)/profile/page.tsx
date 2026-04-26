@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Bell, Menu, Home, Search, MessageSquare, User,
+  Menu, Home, Search, MessageSquare, User,
   Mail, Phone, MapPin, Heart, Clock3, Star, Settings,
   ChevronRight, LogOut,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { BellButton } from "@/components/shared/CustomerNavBar";
+import SideMenu from "@/components/shared/SideMenu";
 
 const menuItems = [
   { title: "Booking History", icon: Clock3, iconWrap: "bg-blue-50", iconColor: "text-blue-500", href: "/profile/bookings" },
@@ -19,6 +22,7 @@ const menuItems = [
 export default function ProfilePage() {
   const { userProfile, logout } = useAuth();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -31,14 +35,12 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
           <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-          <button className="relative text-gray-600 transition hover:text-gray-900">
-            <Bell className="h-8 w-8" />
-            <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
-          </button>
+          <BellButton />
         </div>
       </header>
 
