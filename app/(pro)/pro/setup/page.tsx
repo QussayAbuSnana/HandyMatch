@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Hammer, Plus, X } from "lucide-react";
+import { Hammer, Plus, X, Camera } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
+import { uploadProfilePhoto } from "@/lib/storage";
+import { updateProfile } from "firebase/auth";
 
 const SERVICE_OPTIONS = [
   "Plumbing", "Electrical", "Carpentry", "Painting",
@@ -13,15 +15,25 @@ const SERVICE_OPTIONS = [
 ];
 
 export default function ProSetupPage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [bio, setBio] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [location, setLocation] = useState("");
-  const [phone, setPhone] = useState("");
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const existing = userProfile as unknown as {
+    bio?: string; services?: string[]; hourlyRate?: number;
+    location?: string; phone?: string; isAvailable?: boolean;
+    rating?: number; reviewCount?: number; jobCount?: number;
+  };
+  const isEditing = !!(existing?.services?.length);
+
+  const [bio, setBio] = useState(existing?.bio ?? "");
+  const [hourlyRate, setHourlyRate] = useState(existing?.hourlyRate ? String(existing.hourlyRate) : "");
+  const [location, setLocation] = useState(existing?.location ?? "");
+  const [phone, setPhone] = useState(existing?.phone ?? "");
+  const [selectedServices, setSelectedServices] = useState<string[]>(existing?.services ?? []);
   const [customService, setCustomService] = useState("");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(userProfile?.photoURL ?? null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,6 +65,8 @@ export default function ProSetupPage() {
 
     setSaving(true);
     setError("");
+
+    // Step 1: Save profile fields (always, regardless of photo)
     try {
       await updateUserProfile(user.uid, {
         bio,
@@ -60,17 +74,30 @@ export default function ProSetupPage() {
         hourlyRate: Number(hourlyRate),
         location,
         phone,
-        rating: 0,
-        reviewCount: 0,
-        jobCount: 0,
-        isAvailable: true,
+        // Only set defaults on first setup
+        ...(isEditing ? {} : { rating: 0, reviewCount: 0, jobCount: 0, isAvailable: true }),
       } as Parameters<typeof updateUserProfile>[1]);
-      router.push("/pro/dashboard");
     } catch {
       setError("Failed to save profile. Please try again.");
-    } finally {
       setSaving(false);
+      return;
     }
+
+    // Step 2: Try photo upload separately — don't block save if it fails
+    if (photoFile) {
+      try {
+        await uploadProfilePhoto(user, photoFile);
+      } catch {
+        setError("Profile saved, but photo upload failed. Check Firebase Storage rules.");
+        await refreshProfile();
+        setSaving(false);
+        return;
+      }
+    }
+
+    await refreshProfile();
+    setSaving(false);
+    router.push(isEditing ? "/pro/profile" : "/pro/dashboard");
   };
 
   return (
@@ -81,9 +108,9 @@ export default function ProSetupPage() {
           <div className="bg-white p-3 rounded-2xl shadow-lg mb-4 inline-flex">
             <Hammer className="w-8 h-8 text-violet-600" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Set Up Your Profile</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">{isEditing ? "Edit Your Profile" : "Set Up Your Profile"}</h1>
           <p className="text-violet-100 text-lg">
-            Welcome, {userProfile?.displayName?.split(" ")[0]}! Tell customers about yourself.
+            {isEditing ? "Update your services, rate, and details." : `Welcome, ${userProfile?.displayName?.split(" ")[0]}! Tell customers about yourself.`}
           </p>
         </div>
 
@@ -91,6 +118,43 @@ export default function ProSetupPage() {
           {error && (
             <div className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{error}</div>
           )}
+
+          {/* Profile Photo */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-4xl font-bold overflow-hidden">
+                {photoPreview
+                  ? <img src={photoPreview} alt="avatar" className="h-24 w-24 object-cover" />
+                  : (userProfile?.displayName?.[0]?.toUpperCase() ?? "?")}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-white shadow-md hover:bg-violet-700 transition"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-sm font-semibold text-violet-600 hover:underline"
+            >
+              {photoPreview ? "Change photo" : "Add profile photo"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setPhotoFile(file);
+                setPhotoPreview(URL.createObjectURL(file));
+              }}
+              className="hidden"
+            />
+          </div>
 
           {/* Bio */}
           <div className="space-y-2">
@@ -199,7 +263,7 @@ export default function ProSetupPage() {
             disabled={saving}
             className="w-full py-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white font-bold rounded-2xl shadow-lg hover:opacity-95 transition text-lg disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Complete Setup →"}
+            {saving ? "Saving…" : isEditing ? "Save Changes" : "Complete Setup →"}
           </button>
         </form>
       </div>

@@ -47,16 +47,21 @@ export default function ProfilePage() {
       {/* Profile card */}
       <section className="mx-auto max-w-7xl px-5 pt-5">
         <div className="rounded-[2rem] bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-white shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15">
-              {userProfile?.photoURL
-                ? <img src={userProfile.photoURL} alt="avatar" className="h-24 w-24 rounded-full object-cover" />
-                : <User className="h-12 w-12" />}
+          <div className="flex items-center justify-between gap-5">
+            <div className="flex items-center gap-5">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15">
+                {userProfile?.photoURL
+                  ? <img src={userProfile.photoURL} alt="avatar" className="h-24 w-24 rounded-full object-cover" />
+                  : <User className="h-12 w-12" />}
+              </div>
+              <div>
+                <h2 className="text-4xl font-bold">{userProfile?.displayName ?? "Loading…"}</h2>
+                <p className="mt-2 text-2xl text-white/85">Member since {memberSince}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-4xl font-bold">{userProfile?.displayName ?? "Loading…"}</h2>
-              <p className="mt-2 text-2xl text-white/85">Member since {memberSince}</p>
-            </div>
+            <Link href="/profile/edit" className="shrink-0 rounded-2xl border border-white/30 bg-white/15 px-4 py-2 text-lg font-semibold text-white hover:bg-white/25 transition">
+              Edit
+            </Link>
           </div>
 
           <div className="my-7 h-px bg-white/20" />

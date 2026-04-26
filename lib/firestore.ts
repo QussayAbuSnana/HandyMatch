@@ -101,9 +101,10 @@ export function subscribeProBookings(
     where("professionalId", "==", professionalId),
     orderBy("createdAt", "desc")
   );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking)));
-  });
+  return onSnapshot(q,
+    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking))); },
+    () => { callback([]); }   // permission denied → unblock loading
+  );
 }
 
 /** Real-time listener for customer bookings */
@@ -116,9 +117,10 @@ export function subscribeCustomerBookings(
     where("customerId", "==", customerId),
     orderBy("createdAt", "desc")
   );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking)));
-  });
+  return onSnapshot(q,
+    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking))); },
+    () => { callback([]); }
+  );
 }
 
 // ─── Conversations & Messages ─────────────────────────────────────────────────
@@ -161,9 +163,10 @@ export function subscribeConversations(
     where("participants", "array-contains", uid),
     orderBy("lastMessageAt", "desc")
   );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Conversation)));
-  });
+  return onSnapshot(q,
+    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Conversation))); },
+    () => { callback([]); }
+  );
 }
 
 /** Real-time listener for messages in a conversation */
@@ -176,9 +179,10 @@ export function subscribeMessages(
     orderBy("createdAt", "asc"),
     limit(100)
   );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message)));
-  });
+  return onSnapshot(q,
+    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message))); },
+    () => { callback([]); }
+  );
 }
 
 /** Send a message */
@@ -283,9 +287,10 @@ export function subscribeNotifications(
     orderBy("createdAt", "desc"),
     limit(50)
   );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification)));
-  });
+  return onSnapshot(q,
+    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))); },
+    () => { callback([]); }
+  );
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {

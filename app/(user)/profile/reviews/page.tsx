@@ -4,18 +4,23 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Star, Clock3, MessageSquare } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getDocs, query, collection, where, orderBy } from "firebase/firestore";
+import { getDocs, query, collection, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Review } from "@/lib/types";
 
 async function getMyReviews(reviewerId: string): Promise<Review[]> {
   const q = query(
     collection(db, "reviews"),
-    where("reviewerId", "==", reviewerId),
-    orderBy("createdAt", "desc")
+    where("reviewerId", "==", reviewerId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
+  const reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
+  // Sort client-side to avoid needing a composite Firestore index
+  return reviews.sort((a, b) => {
+    const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    return bS - aS;
+  });
 }
 
 function StarRow({ rating }: { rating: number }) {
@@ -43,10 +48,10 @@ export default function MyReviewsPage() {
 
   useEffect(() => {
     if (!user) return;
-    getMyReviews(user.uid).then((data) => {
-      setReviews(data);
-      setLoading(false);
-    });
+    getMyReviews(user.uid)
+      .then((data) => setReviews(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [user]);
 
   const avgRating = reviews.length

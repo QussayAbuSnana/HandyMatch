@@ -2,21 +2,31 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User, MapPin, Clock3, DollarSign, CheckCircle2, XCircle, Wrench } from "lucide-react";
+import ProSideMenu from "@/components/shared/ProSideMenu";
+import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User, MapPin, Clock3, DollarSign, CheckCircle2, XCircle, Wrench, Star } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { subscribeProBookings, updateBookingStatus, createNotification } from "@/lib/firestore";
+import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
+import ReviewModal from "@/components/shared/ReviewModal";
 
 export default function ProJobsPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
+  const [activeReview, setActiveReview] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const unsub = subscribeProBookings(user.uid, (data) => {
+    const unsub = subscribeProBookings(user.uid, async (data) => {
       setBookings(data);
       setLoading(false);
+      const done = data.filter((b) => b.status === "completed");
+      const checks = await Promise.all(
+        done.map(async (b) => [b.id, await hasReviewed(b.id, user.uid)] as [string, boolean])
+      );
+      setReviewed(Object.fromEntries(checks));
     });
     return unsub;
   }, [user]);
@@ -48,9 +58,10 @@ export default function ProJobsPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <ProSideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
           <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
           <Link href="/pro/notifications" className="relative text-gray-600 transition hover:text-gray-900">
             <Bell className="h-8 w-8" />
@@ -191,9 +202,22 @@ export default function ProJobsPage() {
                           <span className="flex items-center gap-2"><MapPin className="h-5 w-5" />{job.location}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-start gap-4 md:items-end">
+                      <div className="flex flex-col items-start gap-3 md:items-end">
                         <div className="text-3xl font-extrabold text-emerald-600">${job.price}/hr</div>
                         <span className="rounded-full bg-emerald-100 px-4 py-2 text-lg font-semibold text-emerald-700">Completed</span>
+                        {reviewed[job.id] === false && (
+                          <button
+                            onClick={() => setActiveReview(job)}
+                            className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-lg font-semibold text-white hover:bg-amber-600 transition"
+                          >
+                            <Star className="h-5 w-5" /> Review Customer
+                          </button>
+                        )}
+                        {reviewed[job.id] === true && (
+                          <span className="flex items-center gap-2 text-lg font-medium text-green-600">
+                            <CheckCircle2 className="h-5 w-5" /> Reviewed
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -202,6 +226,22 @@ export default function ProJobsPage() {
             )}
           </section>
         </>
+      )}
+
+      {activeReview && userProfile && (
+        <ReviewModal
+          bookingId={activeReview.id}
+          reviewerId={userProfile.uid}
+          reviewerName={userProfile.displayName}
+          subjectId={activeReview.customerId}
+          subjectName={activeReview.customerName}
+          type="pro_to_customer"
+          onDone={() => {
+            setReviewed((prev) => ({ ...prev, [activeReview.id]: true }));
+            setActiveReview(null);
+          }}
+          onClose={() => setActiveReview(null)}
+        />
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
