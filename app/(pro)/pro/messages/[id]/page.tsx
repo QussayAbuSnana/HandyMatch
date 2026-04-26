@@ -1,236 +1,97 @@
+"use client";
+
+import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Phone,
-  MoreVertical,
-  Send,
-  CalendarDays,
-  MapPin,
-  Shield,
-  Clock3,
-} from "lucide-react";
+import { ArrowLeft, Send } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { subscribeMessages, sendMessage } from "@/lib/firestore";
+import { Message } from "@/lib/types";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
+type Props = { params: Promise<{ id: string }> };
 
-const conversations: Record<
-  string,
-  {
-    name: string;
-    service: string;
-    status: string;
-    location: string;
-    image: string;
-    messages: {
-      id: string;
-      sender: "pro" | "customer";
-      text: string;
-      time: string;
-    }[];
-  }
-> = {
-  "john-doe": {
-    name: "John Doe",
-    service: "Kitchen sink repair",
-    status: "Waiting for confirmation",
-    location: "Downtown",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80",
-    messages: [
-      {
-        id: "1",
-        sender: "customer",
-        text: "Hi, I need help with a leaking kitchen sink.",
-        time: "9:10 AM",
-      },
-      {
-        id: "2",
-        sender: "pro",
-        text: "Hello! I can help. Can you share when you need the service?",
-        time: "9:12 AM",
-      },
-      {
-        id: "3",
-        sender: "customer",
-        text: "Today if possible, maybe around 6 PM.",
-        time: "9:14 AM",
-      },
-      {
-        id: "4",
-        sender: "pro",
-        text: "That works. I can come around 6 PM and inspect it first.",
-        time: "9:16 AM",
-      },
-    ],
-  },
-  "emily-clark": {
-    name: "Emily Clark",
-    service: "Electrical wiring check",
-    status: "Quote requested",
-    location: "Westside",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80",
-    messages: [
-      {
-        id: "1",
-        sender: "customer",
-        text: "Can you confirm the final quote for the wiring check?",
-        time: "Yesterday",
-      },
-      {
-        id: "2",
-        sender: "pro",
-        text: "Yes, I’ll send the final estimate shortly.",
-        time: "Yesterday",
-      },
-    ],
-  },
-};
+export default function ProChatPage({ params }: Props) {
+  const { id: conversationId } = use(params);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-export default async function ProChatPage({ params }: Props) {
-  const { id } = await params;
-  const conversation = conversations[id] ?? conversations["john-doe"];
+  useEffect(() => {
+    const unsub = subscribeMessages(conversationId, setMessages);
+    return unsub;
+  }, [conversationId]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || !user) return;
+    setSending(true);
+    try {
+      await sendMessage(conversationId, user.uid, text.trim());
+      setText("");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const formatTime = (ts: unknown) => {
+    if (!ts) return "";
+    const d = new Date((ts as { seconds: number }).seconds * 1000);
+    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
-    <main className="min-h-screen bg-[#f8f8fb]">
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/pro/messages"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-
-            <img
-              src={conversation.image}
-              alt={conversation.name}
-              className="h-12 w-12 rounded-full object-cover"
-            />
-
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">{conversation.name}</h1>
-              <p className="text-sm text-slate-500">{conversation.status}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200">
-              <Phone className="h-5 w-5" />
-            </button>
-            <button className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200">
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </div>
+    <div className="flex flex-col h-screen bg-[#f8f8fb]">
+      <header className="border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-4 flex items-center gap-4">
+        <Link href="/pro/messages" className="text-gray-600 hover:text-gray-900">
+          <ArrowLeft className="h-8 w-8" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Conversation</h1>
+          <p className="text-lg text-slate-500">Customer chat</p>
         </div>
       </header>
 
-      <section className="mx-auto max-w-5xl px-4 pt-5">
-        <div className="rounded-[1.8rem] border border-violet-200 bg-violet-50 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Active Customer Conversation
-              </h2>
-              <p className="mt-1 text-slate-600">{conversation.service}</p>
-            </div>
-
-            <div className="flex flex-wrap gap-3 text-sm">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 font-medium text-slate-700">
-                <MapPin className="h-4 w-4 text-violet-600" />
-                {conversation.location}
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 font-medium text-slate-700">
-                <Shield className="h-4 w-4 text-emerald-600" />
-                Verified booking flow
+      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+        {messages.length === 0 && (
+          <p className="text-center text-xl text-slate-400 mt-20">No messages yet. Start the conversation!</p>
+        )}
+        {messages.map((msg) => {
+          const isMe = msg.senderId === user?.uid;
+          return (
+            <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] rounded-[1.5rem] px-5 py-4 shadow-sm ${isMe ? "bg-violet-600 text-white rounded-br-md" : "bg-white text-slate-900 rounded-bl-md border border-gray-200"}`}>
+                <p className="text-xl leading-relaxed">{msg.text}</p>
+                <p className={`mt-1 text-sm ${isMe ? "text-violet-200" : "text-slate-400"}`}>
+                  {formatTime(msg.createdAt)}
+                </p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
 
-      <section className="mx-auto max-w-5xl px-4 py-5">
-        <div className="rounded-[2rem] border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-          <div className="space-y-4">
-            {conversation.messages.map((message) => {
-              const isPro = message.sender === "pro";
-
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${isPro ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-[1.4rem] px-4 py-3 md:max-w-[70%] ${
-                      isPro
-                        ? "bg-violet-600 text-white"
-                        : "bg-slate-100 text-slate-800"
-                    }`}
-                  >
-                    <p className="text-base leading-7">{message.text}</p>
-                    <div
-                      className={`mt-2 text-xs ${
-                        isPro ? "text-violet-100" : "text-slate-500"
-                      }`}
-                    >
-                      {message.time}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 rounded-[1.6rem] border border-gray-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Reply to customer..."
-                className="w-full bg-transparent px-2 py-3 text-base text-slate-700 outline-none placeholder:text-slate-400"
-              />
-              <button className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white transition hover:bg-violet-700">
-                <Send className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 pb-10">
-        <div className="rounded-[2rem] border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white">
-              <CalendarDays className="h-6 w-6" />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Professional Reminder</h3>
-              <p className="mt-2 text-slate-600">
-                Use the chat to confirm the appointment time, location, and job
-                expectations before arrival.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white">
-              <Clock3 className="h-6 w-6" />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Quick Action Tip</h3>
-              <p className="mt-2 text-slate-600">
-                Fast replies improve trust and increase your chances of converting
-                requests into confirmed jobs.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+      <form onSubmit={handleSend} className="border-t border-gray-200 bg-white px-5 py-4 flex gap-3">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message…"
+          className="flex-1 rounded-[1.5rem] border border-gray-200 bg-gray-50 px-5 py-4 text-xl text-slate-700 outline-none focus:ring-2 focus:ring-violet-500"
+        />
+        <button
+          type="submit"
+          disabled={sending || !text.trim()}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md transition hover:bg-violet-700 disabled:opacity-50"
+        >
+          <Send className="h-7 w-7" />
+        </button>
+      </form>
+    </div>
   );
 }

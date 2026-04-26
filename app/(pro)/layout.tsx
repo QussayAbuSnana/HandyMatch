@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 export default function ProLayout({
@@ -11,17 +11,24 @@ export default function ProLayout({
 }) {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         router.replace("/login");
       } else if (userProfile && userProfile.role !== "professional") {
-        // Customer trying to access professional routes
         router.replace("/dashboard");
+      } else if (
+        userProfile?.role === "professional" &&
+        !(userProfile as unknown as { services?: string[] }).services?.length &&
+        pathname !== "/pro/setup"
+      ) {
+        // New pro with no services set — redirect to setup
+        router.replace("/pro/setup");
       }
     }
-  }, [loading, user, userProfile, router]);
+  }, [loading, user, userProfile, router, pathname]);
 
   if (loading || !user || (userProfile && userProfile.role !== "professional")) {
     return (

@@ -14,7 +14,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Booking, Conversation, Message, UserProfile } from "./types";
+import { Booking, Conversation, Message, Notification, Review, UserProfile } from "./types";
 
 // ─── Users / Professionals ────────────────────────────────────────────────────
 
@@ -200,6 +200,58 @@ export async function sendMessage(
   });
 }
 
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export async function submitReview(
+  review: Omit<Review, "id" | "createdAt">
+): Promise<void> {
+  // Save the review
+  await addDoc(collection(db, "reviews"), {
+    ...review,
+    createdAt: serverTimestamp(),
+  });
+
+  // If reviewing a professional, update their rating average
+  if (review.type === "customer_to_pro") {
+    const q = query(
+      collection(db, "reviews"),
+      where("subjectId", "==", review.subjectId),
+      where("type", "==", "customer_to_pro")
+    );
+    const snap = await getDocs(q);
+    const ratings = snap.docs.map((d) => d.data().rating as number);
+    const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+    await updateDoc(doc(db, "users", review.subjectId), {
+      rating: Math.round(avg * 10) / 10,
+      reviewCount: ratings.length,
+    });
+  }
+}
+
+export async function getReviewsForPro(proId: string): Promise<Review[]> {
+  const q = query(
+    collection(db, "reviews"),
+    where("subjectId", "==", proId),
+    where("type", "==", "customer_to_pro"),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
+}
+
+export async function hasReviewed(
+  bookingId: string,
+  reviewerId: string
+): Promise<boolean> {
+  const q = query(
+    collection(db, "reviews"),
+    where("bookingId", "==", bookingId),
+    where("reviewerId", "==", reviewerId)
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 export async function createNotification(
@@ -218,4 +270,34 @@ export async function createNotification(
     read: false,
     createdAt: serverTimestamp(),
   });
+}
+
+/** Real-time listener for a user's notifications (newest first) */
+export function subscribeNotifications(
+  userId: string,
+  callback: (notifications: Notification[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "notifications"),
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification)));
+  });
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await updateDoc(doc(db, "notifications", notificationId), { read: true });
+}
+
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  const q = query(
+    collection(db, "notifications"),
+    where("userId", "==", userId),
+    where("read", "==", false)
+  );
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => updateDoc(d.ref, { read: true })));
 }

@@ -56,3 +56,30 @@ export interface Conversation {
   lastMessageAt: Timestamp;
   bookingId?: string;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: "booking_request" | "booking_accepted" | "booking_declined" | "booking_completed" | "new_message" | "new_review" | string;
+  linkId?: string | null;
+  read: boolean;
+  createdAt: Timestamp;
+}
+
+export interface Review {
+  id: string;
+  bookingId: string;
+  /** Who wrote the review */
+  reviewerId: string;
+  reviewerName: string;
+  /** Who is being reviewed */
+  subjectId: string;
+  subjectName: string;
+  /** "customer_to_pro" or "pro_to_customer" */
+  type: "customer_to_pro" | "pro_to_customer";
+  rating: number;
+  comment: string;
+  createdAt: Timestamp;
+}

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProfile, createBooking, getOrCreateConversation } from "@/lib/firestore";
-import { UserProfile } from "@/lib/types";
+import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro } from "@/lib/firestore";
+import { UserProfile, Review } from "@/lib/types";
+import BookingModal from "@/components/shared/BookingModal";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -17,14 +18,15 @@ export default function ProfessionalDetailPage({ params }: Props) {
 
   const [pro, setPro] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
+  const [showBooking, setShowBooking] = useState(false);
   const [booked, setBooked] = useState(false);
-  const [error, setError] = useState("");
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     getUserProfile(id)
       .then(setPro)
       .finally(() => setLoading(false));
+    getReviewsForPro(id).then(setReviews);
   }, [id]);
 
   const proData = pro as unknown as {
@@ -33,29 +35,22 @@ export default function ProfessionalDetailPage({ params }: Props) {
     location?: string; isAvailable?: boolean;
   };
 
-  const handleBook = async () => {
+  const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string }) => {
     if (!user || !userProfile || !pro) return;
-    setBooking(true);
-    setError("");
-    try {
-      await createBooking({
-        customerId: user.uid,
-        professionalId: pro.uid,
-        customerName: userProfile.displayName,
-        professionalName: pro.displayName,
-        service: proData.services?.[0] ?? "General Service",
-        status: "pending",
-        scheduledAt: null as unknown as import("firebase/firestore").Timestamp,
-        location: userProfile.location ?? "TBD",
-        price: proData.hourlyRate ?? 0,
-        notes: "",
-      });
-      setBooked(true);
-    } catch {
-      setError("Failed to send booking request. Please try again.");
-    } finally {
-      setBooking(false);
-    }
+    await createBooking({
+      customerId: user.uid,
+      professionalId: pro.uid,
+      customerName: userProfile.displayName,
+      professionalName: pro.displayName,
+      service: data.service,
+      status: "pending",
+      scheduledAt: data.scheduledAt as unknown as import("firebase/firestore").Timestamp,
+      location: data.location,
+      price: proData.hourlyRate ?? 0,
+      notes: data.notes,
+    });
+    setShowBooking(false);
+    setBooked(true);
   };
 
   const handleMessage = async () => {
@@ -176,6 +171,33 @@ export default function ProfessionalDetailPage({ params }: Props) {
           </div>
         )}
 
+        {/* Reviews */}
+        {reviews.length > 0 && (
+          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-2xl font-bold text-slate-900 mb-5">Reviews</h3>
+            <div className="space-y-4">
+              {reviews.map((r) => (
+                <div key={r.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-semibold text-slate-800">{r.reviewerName}</p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-5 w-5 ${star <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {r.comment && (
+                    <p className="mt-2 text-lg text-slate-600 leading-relaxed">{r.comment}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Booking success */}
         {booked && (
           <div className="rounded-[2rem] border border-green-200 bg-green-50 p-6 text-center shadow-sm">
@@ -183,10 +205,6 @@ export default function ProfessionalDetailPage({ params }: Props) {
             <p className="text-2xl font-bold text-green-800">Booking Request Sent!</p>
             <p className="mt-2 text-lg text-green-700">{pro.displayName} will respond shortly.</p>
           </div>
-        )}
-
-        {error && (
-          <p className="text-center text-red-600 text-lg">{error}</p>
         )}
 
         {/* Actions */}
@@ -199,16 +217,26 @@ export default function ProfessionalDetailPage({ params }: Props) {
               <MessageSquare className="h-6 w-6" />Message
             </button>
             <button
-              onClick={handleBook}
-              disabled={booking}
-              className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] bg-violet-600 px-6 py-5 text-xl font-bold text-white shadow-lg transition hover:bg-violet-700 disabled:opacity-60"
+              onClick={() => setShowBooking(true)}
+              className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] bg-violet-600 px-6 py-5 text-xl font-bold text-white shadow-lg transition hover:bg-violet-700"
             >
               <CalendarDays className="h-6 w-6" />
-              {booking ? "Sending…" : `Book · $${proData.hourlyRate ?? "—"}/hr`}
+              {`Book · $${proData.hourlyRate ?? "—"}/hr`}
             </button>
           </div>
         )}
       </div>
+
+      {showBooking && userProfile && (
+        <BookingModal
+          professionalName={pro.displayName}
+          services={proData.services ?? ["General Service"]}
+          hourlyRate={proData.hourlyRate ?? 0}
+          customerLocation={userProfile.location ?? ""}
+          onConfirm={handleBook}
+          onClose={() => setShowBooking(false)}
+        />
+      )}
     </main>
   );
 }

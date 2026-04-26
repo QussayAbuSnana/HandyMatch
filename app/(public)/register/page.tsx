@@ -51,7 +51,7 @@ export default function RegisterPage() {
     try {
       await register(email, password, displayName.trim());
       // Redirect to role selection
-      router.push("/");
+      router.push("/select-role");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
