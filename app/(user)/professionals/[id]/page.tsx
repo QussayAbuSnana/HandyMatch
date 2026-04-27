@@ -4,8 +4,9 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
+import { WeeklyAvailability } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro } from "@/lib/firestore";
+import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification } from "@/lib/firestore";
 import { UserProfile, Review } from "@/lib/types";
 import BookingModal from "@/components/shared/BookingModal";
 
@@ -33,6 +34,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
     bio?: string; services?: string[]; hourlyRate?: number;
     rating?: number; reviewCount?: number; jobCount?: number;
     location?: string; isAvailable?: boolean;
+    availability?: WeeklyAvailability; serviceArea?: string;
   };
 
   const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string }) => {
@@ -49,6 +51,13 @@ export default function ProfessionalDetailPage({ params }: Props) {
       price: proData.hourlyRate ?? 0,
       notes: data.notes,
     });
+    await createNotification(
+      pro.uid,
+      "New Booking Request!",
+      `${userProfile.displayName} requested ${data.service}.`,
+      "booking_request",
+      undefined
+    );
     setShowBooking(false);
     setBooked(true);
   };
@@ -167,6 +176,43 @@ export default function ProfessionalDetailPage({ params }: Props) {
               {proData.services.map((s) => (
                 <span key={s} className="rounded-full border border-violet-200 bg-violet-50 px-5 py-2 text-lg font-medium text-violet-700">{s}</span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Availability */}
+        {proData.availability && (
+          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-1 flex items-center gap-2 text-2xl font-bold text-slate-900">
+              <CalendarDays className="h-6 w-6 text-violet-600" /> Weekly Availability
+            </h3>
+            {proData.serviceArea && (
+              <p className="mb-4 flex items-center gap-2 text-lg text-slate-500">
+                <MapPin className="h-4 w-4 text-violet-400" /> {proData.serviceArea}
+              </p>
+            )}
+            <div className="mt-4 space-y-2">
+              {(["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as const).map((day) => {
+                const slot = proData.availability![day];
+                const label = day.charAt(0).toUpperCase() + day.slice(1);
+                return (
+                  <div key={day} className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+                    slot.enabled ? "bg-violet-50 border border-violet-100" : "bg-gray-50 border border-gray-100"
+                  }`}>
+                    <span className={`text-lg font-semibold w-32 ${slot.enabled ? "text-violet-700" : "text-slate-400"}`}>
+                      {label}
+                    </span>
+                    {slot.enabled ? (
+                      <span className="flex items-center gap-2 text-lg text-slate-700 font-medium">
+                        <Clock3 className="h-4 w-4 text-violet-400" />
+                        {slot.start} – {slot.end}
+                      </span>
+                    ) : (
+                      <span className="text-lg text-slate-400 font-medium">Closed</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

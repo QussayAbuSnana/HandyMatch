@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,6 +9,8 @@ import {
   ChevronRight, LogOut, Wrench, BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { getReviewsForPro } from "@/lib/firestore";
+import { Review } from "@/lib/types";
 import ProSideMenu from "@/components/shared/ProSideMenu";
 
 const menuItems = [
@@ -22,6 +24,12 @@ export default function ProProfilePage() {
   const { userProfile, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    getReviewsForPro(userProfile.uid).then(setReviews);
+  }, [userProfile?.uid]);
 
   const pro = userProfile as unknown as {
     bio?: string; services?: string[]; hourlyRate?: number;
@@ -111,6 +119,32 @@ export default function ProProfilePage() {
                 <span key={s} className="flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-lg font-medium text-violet-700">
                   <Star className="h-4 w-4 fill-violet-400 text-violet-400" />{s}
                 </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Reviews */}
+      {reviews.length > 0 && (
+        <section className="mx-auto max-w-7xl px-5 pt-6">
+          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-5 text-3xl font-bold text-slate-900">Customer Reviews</h2>
+            <div className="space-y-4">
+              {reviews.map((r) => (
+                <div key={r.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-semibold text-slate-800">{r.reviewerName}</p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star key={star} className={`h-5 w-5 ${star <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                      ))}
+                    </div>
+                  </div>
+                  {r.comment && (
+                    <p className="mt-2 text-lg text-slate-600 leading-relaxed">{r.comment}</p>
+                  )}
+                </div>
               ))}
             </div>
           </div>

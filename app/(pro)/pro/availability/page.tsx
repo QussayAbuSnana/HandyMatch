@@ -1,231 +1,212 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Clock3,
-  CalendarDays,
-  MapPin,
-  Save,
-  CheckCircle2,
-  Briefcase,
-} from "lucide-react";
+import { ArrowLeft, Clock3, CalendarDays, MapPin, Save, CheckCircle2, ToggleLeft, ToggleRight } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { updateUserProfile } from "@/lib/firestore";
+import { WeeklyAvailability, DaySchedule } from "@/lib/types";
 
-const weekDays = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+const DAYS: { key: keyof WeeklyAvailability; label: string; short: string }[] = [
+  { key: "sunday",    label: "Sunday",    short: "Sun" },
+  { key: "monday",    label: "Monday",    short: "Mon" },
+  { key: "tuesday",   label: "Tuesday",   short: "Tue" },
+  { key: "wednesday", label: "Wednesday", short: "Wed" },
+  { key: "thursday",  label: "Thursday",  short: "Thu" },
+  { key: "friday",    label: "Friday",    short: "Fri" },
+  { key: "saturday",  label: "Saturday",  short: "Sat" },
 ];
 
+const DEFAULT_SCHEDULE: WeeklyAvailability = {
+  sunday:    { enabled: false, start: "09:00", end: "17:00" },
+  monday:    { enabled: true,  start: "09:00", end: "17:00" },
+  tuesday:   { enabled: true,  start: "09:00", end: "17:00" },
+  wednesday: { enabled: true,  start: "09:00", end: "17:00" },
+  thursday:  { enabled: true,  start: "09:00", end: "17:00" },
+  friday:    { enabled: true,  start: "09:00", end: "14:00" },
+  saturday:  { enabled: false, start: "09:00", end: "17:00" },
+};
+
 export default function ProAvailabilityPage() {
+  const { user, userProfile, refreshProfile } = useAuth();
+
+  const [schedule, setSchedule] = useState<WeeklyAvailability>(DEFAULT_SCHEDULE);
   const [isAvailable, setIsAvailable] = useState(true);
-  const [serviceArea, setServiceArea] = useState("Downtown, Midtown, Westside");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("18:00");
-  const [selectedDays, setSelectedDays] = useState<string[]>([
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-  ]);
+  const [serviceArea, setServiceArea] = useState("");
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  function toggleDay(day: string) {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day]
-    );
-    setSaved(false);
-  }
+  // Load existing data from profile
+  useEffect(() => {
+    if (!userProfile) return;
+    const pro = userProfile as unknown as { isAvailable?: boolean; serviceArea?: string; availability?: WeeklyAvailability };
+    if (pro.isAvailable !== undefined) setIsAvailable(pro.isAvailable);
+    if (pro.serviceArea) setServiceArea(pro.serviceArea);
+    if (pro.availability) setSchedule(pro.availability);
+  }, [userProfile]);
 
-  function handleSave() {
-    setSaved(true);
-  }
+  const updateDay = (key: keyof WeeklyAvailability, field: keyof DaySchedule, value: string | boolean) => {
+    setSaved(false);
+    setSchedule((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value },
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      await updateUserProfile(user.uid, {
+        availability: schedule,
+        isAvailable,
+        serviceArea,
+      } as Parameters<typeof updateUserProfile>[1]);
+      await refreshProfile();
+      setSaved(true);
+    } catch {
+      alert("Failed to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-10">
+      {/* Header banner */}
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-8 pt-6 text-white">
         <div className="mx-auto max-w-4xl">
           <div className="mb-6 flex items-center justify-between">
-            <Link
-              href="/pro/profile"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white"
-            >
+            <Link href="/pro/profile"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
               <ArrowLeft className="h-6 w-6" />
             </Link>
-
-            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
-              Availability
-            </div>
+            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">Availability</div>
           </div>
-
-          <p className="text-lg text-white/85">Professional settings</p>
-          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">
-            Manage Your Availability
-          </h1>
-          <p className="mt-3 text-lg text-white/85 md:text-xl">
-            Keep your schedule updated so customers can find and book you more easily.
-          </p>
+          <h1 className="mt-2 text-4xl font-extrabold">Manage Your Availability</h1>
+          <p className="mt-3 text-lg text-white/85">Set your working days and hours so customers know when to book you.</p>
         </div>
       </section>
 
+      {/* Overall availability toggle */}
       <section className="mx-auto -mt-4 max-w-4xl px-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Current Status</h2>
-              <p className="mt-2 text-slate-600">
-                Control whether you are currently accepting new service requests.
-              </p>
+              <h2 className="text-2xl font-bold text-slate-900">Accepting Bookings</h2>
+              <p className="mt-1 text-slate-500">Turn off to pause all new booking requests.</p>
             </div>
-
             <button
               type="button"
-              onClick={() => {
-                setIsAvailable((prev) => !prev);
-                setSaved(false);
-              }}
-              className={`inline-flex items-center rounded-full px-5 py-3 text-lg font-semibold transition ${
-                isAvailable
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-200 text-gray-700"
+              onClick={() => { setIsAvailable((p) => !p); setSaved(false); }}
+              className={`flex items-center gap-2 rounded-full px-5 py-3 text-lg font-semibold transition ${
+                isAvailable ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"
               }`}
             >
-              {isAvailable ? "Available Now" : "Unavailable"}
+              {isAvailable
+                ? <><ToggleRight className="h-6 w-6" /> Available</>
+                : <><ToggleLeft className="h-6 w-6" /> Unavailable</>}
             </button>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-5 pt-6">
+      {/* Service area */}
+      <section className="mx-auto max-w-4xl px-5 pt-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-          <label className="mb-3 flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <MapPin className="h-5 w-5 text-violet-600" />
-            Service Area
+          <label className="mb-3 flex items-center gap-2 text-xl font-bold text-slate-900">
+            <MapPin className="h-5 w-5 text-violet-600" /> Service Area
           </label>
-
           <input
             type="text"
             value={serviceArea}
-            onChange={(e) => {
-              setServiceArea(e.target.value);
-              setSaved(false);
-            }}
-            placeholder="Enter your service area"
-            className="w-full rounded-[1.2rem] border border-gray-200 bg-white px-4 py-4 text-lg text-slate-700 outline-none transition placeholder:text-gray-400 focus:border-violet-400"
+            onChange={(e) => { setServiceArea(e.target.value); setSaved(false); }}
+            placeholder="e.g. תל אביב, רמת גן, גבעתיים"
+            className="w-full rounded-[1.2rem] border border-gray-200 bg-gray-50 px-4 py-4 text-lg text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-5 pt-6">
+      {/* Weekly schedule */}
+      <section className="mx-auto max-w-4xl px-5 pt-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-5 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Clock3 className="h-6 w-6 text-violet-600" />
-            Working Hours
+          <h2 className="mb-6 flex items-center gap-2 text-2xl font-bold text-slate-900">
+            <CalendarDays className="h-6 w-6 text-violet-600" /> Weekly Schedule
           </h2>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <label className="mb-3 block text-lg font-semibold text-slate-900">
-                Start Time
-              </label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => {
-                  setStartTime(e.target.value);
-                  setSaved(false);
-                }}
-                className="w-full rounded-[1.2rem] border border-gray-200 bg-white px-4 py-4 text-lg text-slate-700 outline-none transition focus:border-violet-400"
-              />
-            </div>
-
-            <div>
-              <label className="mb-3 block text-lg font-semibold text-slate-900">
-                End Time
-              </label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => {
-                  setEndTime(e.target.value);
-                  setSaved(false);
-                }}
-                className="w-full rounded-[1.2rem] border border-gray-200 bg-white px-4 py-4 text-lg text-slate-700 outline-none transition focus:border-violet-400"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-4xl px-5 pt-6">
-        <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-5 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <CalendarDays className="h-6 w-6 text-violet-600" />
-            Available Days
-          </h2>
-
-          <div className="flex flex-wrap gap-3">
-            {weekDays.map((day) => {
-              const active = selectedDays.includes(day);
-
+          <div className="space-y-4">
+            {DAYS.map(({ key, label }) => {
+              const day = schedule[key];
               return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  className={`rounded-full px-5 py-3 text-base font-semibold transition ${
-                    active
-                      ? "bg-violet-600 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                <div key={key}
+                  className={`rounded-2xl border p-4 transition ${
+                    day.enabled ? "border-violet-200 bg-violet-50" : "border-gray-200 bg-gray-50"
                   }`}
                 >
-                  {day}
-                </button>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    {/* Day toggle */}
+                    <button
+                      type="button"
+                      onClick={() => updateDay(key, "enabled", !day.enabled)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`h-6 w-11 rounded-full transition-colors relative ${
+                        day.enabled ? "bg-violet-600" : "bg-gray-300"
+                      }`}>
+                        <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                          day.enabled ? "translate-x-5" : "translate-x-0.5"
+                        }`} />
+                      </div>
+                      <span className={`text-xl font-bold ${day.enabled ? "text-violet-700" : "text-slate-400"}`}>
+                        {label}
+                      </span>
+                    </button>
+
+                    {/* Time pickers */}
+                    {day.enabled && (
+                      <div className="flex items-center gap-3">
+                        <Clock3 className="h-5 w-5 text-violet-400 shrink-0" />
+                        <input
+                          type="time"
+                          value={day.start}
+                          onChange={(e) => updateDay(key, "start", e.target.value)}
+                          className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-lg font-medium text-slate-700 outline-none focus:border-violet-500"
+                        />
+                        <span className="text-slate-400 font-medium">to</span>
+                        <input
+                          type="time"
+                          value={day.end}
+                          onChange={(e) => updateDay(key, "end", e.target.value)}
+                          className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-lg font-medium text-slate-700 outline-none focus:border-violet-500"
+                        />
+                      </div>
+                    )}
+
+                    {!day.enabled && (
+                      <span className="text-lg font-medium text-slate-400">Closed</span>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-5 pt-6">
-        <div className="rounded-[2rem] border border-blue-200 bg-blue-50 p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white">
-              <Briefcase className="h-6 w-6" />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Why this matters</h3>
-              <p className="mt-2 text-slate-600">
-                Accurate availability helps customers trust your profile and improves
-                your chances of receiving relevant bookings.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-4xl px-5 pt-6">
+      {/* Save */}
+      <section className="mx-auto max-w-4xl px-5 pt-6 pb-10">
         <div className="flex flex-col gap-4 sm:flex-row">
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-green-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-green-700"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-violet-600 px-8 py-4 text-lg font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
           >
             <Save className="h-5 w-5" />
-            Save Changes
+            {saving ? "Saving…" : "Save Availability"}
           </button>
-
-          <Link
-            href="/pro/profile"
-            className="inline-flex items-center justify-center rounded-[1.2rem] border border-gray-200 bg-white px-6 py-4 text-lg font-semibold text-slate-700 transition hover:bg-gray-50"
-          >
+          <Link href="/pro/profile"
+            className="inline-flex items-center justify-center rounded-[1.2rem] border border-gray-200 bg-white px-8 py-4 text-lg font-semibold text-slate-700 transition hover:bg-gray-50">
             Cancel
           </Link>
         </div>
@@ -236,14 +217,9 @@ export default function ProAvailabilityPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-
               <div>
-                <h3 className="text-xl font-bold text-slate-900">
-                  Availability Updated
-                </h3>
-                <p className="mt-1 text-slate-600">
-                  Your new availability settings have been saved successfully.
-                </p>
+                <h3 className="text-xl font-bold text-slate-900">Availability Saved!</h3>
+                <p className="mt-1 text-slate-600">Customers can now see your weekly schedule.</p>
               </div>
             </div>
           </div>

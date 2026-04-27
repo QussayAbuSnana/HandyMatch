@@ -73,22 +73,30 @@ export async function updateBookingStatus(
 export async function getCustomerBookings(customerId: string): Promise<Booking[]> {
   const q = query(
     collection(db, "bookings"),
-    where("customerId", "==", customerId),
-    orderBy("createdAt", "desc")
+    where("customerId", "==", customerId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+  const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+  return results.sort((a, b) => {
+    const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    return bS - aS;
+  });
 }
 
 /** Bookings where user is the professional */
 export async function getProBookings(professionalId: string): Promise<Booking[]> {
   const q = query(
     collection(db, "bookings"),
-    where("professionalId", "==", professionalId),
-    orderBy("createdAt", "desc")
+    where("professionalId", "==", professionalId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+  const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+  return results.sort((a, b) => {
+    const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    return bS - aS;
+  });
 }
 
 /** Real-time listener for pro bookings */
@@ -98,12 +106,19 @@ export function subscribeProBookings(
 ): Unsubscribe {
   const q = query(
     collection(db, "bookings"),
-    where("professionalId", "==", professionalId),
-    orderBy("createdAt", "desc")
+    where("professionalId", "==", professionalId)
   );
   return onSnapshot(q,
-    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking))); },
-    () => { callback([]); }   // permission denied → unblock loading
+    (snap) => {
+      const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+      results.sort((a, b) => {
+        const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        return bS - aS;
+      });
+      callback(results);
+    },
+    () => { callback([]); }
   );
 }
 
@@ -114,11 +129,18 @@ export function subscribeCustomerBookings(
 ): Unsubscribe {
   const q = query(
     collection(db, "bookings"),
-    where("customerId", "==", customerId),
-    orderBy("createdAt", "desc")
+    where("customerId", "==", customerId)
   );
   return onSnapshot(q,
-    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking))); },
+    (snap) => {
+      const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking));
+      results.sort((a, b) => {
+        const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        return bS - aS;
+      });
+      callback(results);
+    },
     () => { callback([]); }
   );
 }
@@ -225,18 +247,22 @@ export async function submitReview(
 
   // If reviewing a professional, update their rating average
   if (review.type === "customer_to_pro") {
-    const q = query(
-      collection(db, "reviews"),
-      where("subjectId", "==", review.subjectId),
-      where("type", "==", "customer_to_pro")
-    );
-    const snap = await getDocs(q);
-    const ratings = snap.docs.map((d) => d.data().rating as number);
-    const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
-    await updateDoc(doc(db, "users", review.subjectId), {
-      rating: Math.round(avg * 10) / 10,
-      reviewCount: ratings.length,
-    });
+    try {
+      const q = query(
+        collection(db, "reviews"),
+        where("subjectId", "==", review.subjectId),
+        where("type", "==", "customer_to_pro")
+      );
+      const snap = await getDocs(q);
+      const ratings = snap.docs.map((d) => d.data().rating as number);
+      const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      await updateDoc(doc(db, "users", review.subjectId), {
+        rating: Math.round(avg * 10) / 10,
+        reviewCount: ratings.length,
+      });
+    } catch {
+      // Rating update failed (Firestore rules) — review was still saved
+    }
   }
 }
 
@@ -292,11 +318,18 @@ export function subscribeNotifications(
   const q = query(
     collection(db, "notifications"),
     where("userId", "==", userId),
-    orderBy("createdAt", "desc"),
     limit(50)
   );
   return onSnapshot(q,
-    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))); },
+    (snap) => {
+      const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification));
+      results.sort((a, b) => {
+        const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+        return bS - aS;
+      });
+      callback(results);
+    },
     () => { callback([]); }
   );
 }
