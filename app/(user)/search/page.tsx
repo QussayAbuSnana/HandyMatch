@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Menu, Search, SlidersHorizontal, Home, MessageSquare, User, Star, MapPin, Clock3, Shield } from "lucide-react";
+import { Menu, Search, SlidersHorizontal, Home, MessageSquare, User, Star, MapPin, Clock3, Shield } from "lucide-react";
 import { getProfessionals } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
+import SideMenu from "@/components/shared/SideMenu";
+import { BellButton } from "@/components/shared/CustomerNavBar";
 
 export default function SearchPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [professionals, setProfessionals] = useState<UserProfile[]>([]);
   const [filtered, setFiltered] = useState<UserProfile[]>([]);
   const [query, setQuery] = useState("");
@@ -38,14 +41,12 @@ export default function SearchPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
-          <button className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
+          <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
           <h1 className="text-3xl font-bold text-slate-900">Find Providers</h1>
-          <button className="relative text-gray-600 transition hover:text-gray-900">
-            <Bell className="h-8 w-8" />
-            <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
-          </button>
+          <BellButton />
         </div>
       </header>
 

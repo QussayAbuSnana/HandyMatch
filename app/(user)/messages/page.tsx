@@ -54,17 +54,20 @@ export default function MessagesPage() {
               const otherName = Object.entries(conv.participantNames ?? {}).find(([id]) => id !== user?.uid)?.[1] ?? "Unknown";
               return (
                 <Link key={conv.id} href={`/messages/${conv.id}`}
-                  className="flex items-start justify-between gap-4 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-                  <div className="flex items-start gap-4">
-                    <div className="h-16 w-16 rounded-[1.3rem] bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-white text-2xl font-bold">
-                      {otherName[0]}
+                  className="flex items-center justify-between gap-4 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="relative shrink-0">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-white text-2xl font-bold">
+                        {otherName[0]}
+                      </div>
+                      <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white bg-green-400" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="text-2xl font-bold text-slate-900">{otherName}</h3>
-                      <p className="mt-2 text-xl text-slate-600 line-clamp-1">{conv.lastMessage || "Start the conversation…"}</p>
+                      <p className="mt-1 text-lg text-slate-500 truncate">{conv.lastMessage || "Start the conversation…"}</p>
                     </div>
                   </div>
-                  <span className="text-lg text-slate-500 whitespace-nowrap">{timeAgo(conv.lastMessageAt)}</span>
+                  <span className="text-base text-slate-400 whitespace-nowrap shrink-0">{timeAgo(conv.lastMessageAt)}</span>
                 </Link>
               );
             })}

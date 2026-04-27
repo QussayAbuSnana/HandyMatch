@@ -2,29 +2,46 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Phone } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeMessages, sendMessage } from "@/lib/firestore";
-import { Message } from "@/lib/types";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Message, Conversation } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default function ChatPage({ params }: Props) {
   const { id: conversationId } = use(params);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load conversation metadata (for the other person's name)
+  useEffect(() => {
+    getDoc(doc(db, "conversations", conversationId)).then((snap) => {
+      if (snap.exists()) setConversation({ id: snap.id, ...snap.data() } as Conversation);
+    });
+  }, [conversationId]);
+
+  // Subscribe to messages
   useEffect(() => {
     const unsub = subscribeMessages(conversationId, setMessages);
     return unsub;
   }, [conversationId]);
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const otherName = conversation
+    ? Object.entries(conversation.participantNames ?? {}).find(([id]) => id !== user?.uid)?.[1] ?? "Unknown"
+    : "…";
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,66 +50,141 @@ export default function ChatPage({ params }: Props) {
     try {
       await sendMessage(conversationId, user.uid, text.trim());
       setText("");
+      inputRef.current?.focus();
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e as unknown as React.FormEvent);
     }
   };
 
   const formatTime = (ts: unknown) => {
     if (!ts) return "";
     const d = new Date((ts as { seconds: number }).seconds * 1000);
-    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   };
+
+  const formatDate = (ts: unknown) => {
+    if (!ts) return "";
+    const d = new Date((ts as { seconds: number }).seconds * 1000);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // Group messages by date
+  const grouped: { date: string; messages: Message[] }[] = [];
+  for (const msg of messages) {
+    const date = formatDate(msg.createdAt);
+    const last = grouped[grouped.length - 1];
+    if (last && last.date === date) {
+      last.messages.push(msg);
+    } else {
+      grouped.push({ date, messages: [msg] });
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#f8f8fb]">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-4 flex items-center gap-4">
-        <Link href="/messages" className="text-gray-600 hover:text-gray-900">
+      <header className="border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-4 flex items-center gap-4 sticky top-0 z-10">
+        <Link href="/messages" className="text-gray-600 hover:text-gray-900 shrink-0">
           <ArrowLeft className="h-8 w-8" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Conversation</h1>
-          <p className="text-lg text-slate-500">Real-time chat</p>
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-xl font-bold shrink-0">
+          {otherName[0] ?? "?"}
         </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 truncate">{otherName}</h1>
+          <p className="text-base text-green-500 font-medium">Online</p>
+        </div>
+        <Link href={`tel:${userProfile?.phone ?? ""}`} className="text-gray-500 hover:text-violet-600 transition">
+          <Phone className="h-7 w-7" />
+        </Link>
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
         {messages.length === 0 && (
-          <p className="text-center text-xl text-slate-400 mt-20">No messages yet. Say hello!</p>
-        )}
-        {messages.map((msg) => {
-          const isMe = msg.senderId === user?.uid;
-          return (
-            <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] rounded-[1.5rem] px-5 py-4 shadow-sm ${isMe ? "bg-violet-600 text-white rounded-br-md" : "bg-white text-slate-900 rounded-bl-md border border-gray-200"}`}>
-                <p className="text-xl leading-relaxed">{msg.text}</p>
-                <p className={`mt-1 text-sm ${isMe ? "text-violet-200" : "text-slate-400"}`}>
-                  {formatTime(msg.createdAt)}
-                </p>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-100 text-4xl font-bold text-violet-600">
+              {otherName[0] ?? "?"}
             </div>
-          );
-        })}
+            <p className="text-2xl font-bold text-slate-900">{otherName}</p>
+            <p className="text-lg text-slate-400">No messages yet. Say hello!</p>
+          </div>
+        )}
+
+        {grouped.map(({ date, messages: msgs }) => (
+          <div key={date}>
+            {/* Date separator */}
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-sm font-medium text-slate-400 px-2">{date}</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {msgs.map((msg, i) => {
+              const isMe = msg.senderId === user?.uid;
+              const prevMsg = msgs[i - 1];
+              const isSameAuthor = prevMsg?.senderId === msg.senderId;
+
+              return (
+                <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} ${isSameAuthor ? "mt-1" : "mt-3"}`}>
+                  {/* Other person avatar — only show on first message in a group */}
+                  {!isMe && !isSameAuthor && (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 text-white text-base font-bold mr-2 mt-auto shrink-0">
+                      {otherName[0]}
+                    </div>
+                  )}
+                  {!isMe && isSameAuthor && <div className="w-11 shrink-0" />}
+
+                  <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
+                    <div className={`rounded-[1.4rem] px-5 py-3 shadow-sm ${
+                      isMe
+                        ? "bg-violet-600 text-white rounded-br-sm"
+                        : "bg-white text-slate-900 border border-gray-200 rounded-bl-sm"
+                    }`}>
+                      <p className="text-lg leading-relaxed">{msg.text}</p>
+                    </div>
+                    <p className={`mt-1 text-xs px-1 ${isMe ? "text-slate-400 text-right" : "text-slate-400"}`}>
+                      {formatTime(msg.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="border-t border-gray-200 bg-white px-5 py-4 flex gap-3">
+      <form onSubmit={handleSend} className="border-t border-gray-200 bg-white px-4 py-4 flex gap-3 items-center">
         <input
+          ref={inputRef}
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message…"
-          className="flex-1 rounded-[1.5rem] border border-gray-200 bg-gray-50 px-5 py-4 text-xl text-slate-700 outline-none focus:ring-2 focus:ring-violet-500"
+          className="flex-1 rounded-[1.5rem] border border-gray-200 bg-gray-50 px-5 py-4 text-lg text-slate-700 outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition"
+          autoComplete="off"
         />
         <button
           type="submit"
           disabled={sending || !text.trim()}
-          className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md transition hover:bg-violet-700 disabled:opacity-50"
+          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md transition hover:bg-violet-700 disabled:opacity-40 shrink-0"
         >
-          <Send className="h-7 w-7" />
+          <Send className="h-6 w-6" />
         </button>
       </form>
     </div>
