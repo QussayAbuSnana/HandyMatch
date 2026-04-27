@@ -1,41 +1,50 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Menu, Search, SlidersHorizontal, Home, MessageSquare, User, Star, MapPin, Clock3, Shield } from "lucide-react";
 import { getProfessionals } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
+import { useAuth } from "@/lib/auth-context";
 import SideMenu from "@/components/shared/SideMenu";
 import { BellButton } from "@/components/shared/CustomerNavBar";
 
 export default function SearchPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [menuOpen, setMenuOpen] = useState(false);
   const [professionals, setProfessionals] = useState<UserProfile[]>([]);
   const [filtered, setFiltered] = useState<UserProfile[]>([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(searchParams.get("q") ?? searchParams.get("service") ?? "");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     getProfessionals()
       .then((data) => {
         setProfessionals(data);
         setFiltered(data);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
     if (!q) {
       setFiltered(professionals);
       return;
     }
     setFiltered(
-      professionals.filter((p) =>
-        p.displayName.toLowerCase().includes(q) ||
-        (p as unknown as { services?: string[] }).services?.some((s: string) => s.toLowerCase().includes(q)) ||
-        (p as unknown as { bio?: string }).bio?.toLowerCase().includes(q)
-      )
+      professionals.filter((p) => {
+        const pro = p as unknown as { services?: string[]; bio?: string; location?: string };
+        return (
+          p.displayName.toLowerCase().includes(q) ||
+          pro.services?.some((s) => s.toLowerCase().includes(q)) ||
+          pro.bio?.toLowerCase().includes(q) ||
+          pro.location?.toLowerCase().includes(q)
+        );
+      })
     );
   }, [query, professionals]);
 

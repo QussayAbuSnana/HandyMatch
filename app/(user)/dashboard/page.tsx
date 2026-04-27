@@ -7,6 +7,7 @@ import {
   Home, MessageSquare, User, Sparkles, Check,
   Droplets, Zap, Hammer, Paintbrush, TrendingUp,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { getProfessionals } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
@@ -65,9 +66,17 @@ const benefits = [
 
 export default function CustomerDashboardPage() {
   const { userProfile } = useAuth();
+  const router = useRouter();
   const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
   const [menuOpen, setMenuOpen] = useState(false);
   const [topPros, setTopPros] = useState<UserProfile[]>([]);
+  const [searchInput, setSearchInput] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchInput.trim();
+    router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+  };
 
   useEffect(() => {
     getProfessionals().then((all) => {
@@ -118,19 +127,24 @@ export default function CustomerDashboardPage() {
             Trusted local professionals at your fingertips
           </p>
 
-          <div className="mt-8 flex items-center justify-between rounded-[2rem] bg-white px-5 py-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-gray-400">
-              <Search className="h-7 w-7" />
-              <span className="text-lg md:text-2xl">Search for services...</span>
+          <form onSubmit={handleSearch} className="mt-8 flex items-center justify-between rounded-[2rem] bg-white px-5 py-4 shadow-2xl">
+            <div className="flex flex-1 items-center gap-3 text-gray-400">
+              <Search className="h-7 w-7 shrink-0" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search for services..."
+                className="w-full bg-transparent text-lg text-slate-700 placeholder:text-gray-400 outline-none md:text-2xl"
+              />
             </div>
-
-            <Link
-              href="/search"
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600 text-white transition hover:bg-violet-700"
+            <button
+              type="submit"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white transition hover:bg-violet-700"
             >
               <MapPin className="h-7 w-7" />
-            </Link>
-          </div>
+            </button>
+          </form>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {[
@@ -178,7 +192,7 @@ export default function CustomerDashboardPage() {
         </div>
 
         <Link
-          href="/search"
+          href="/categories"
           className="mt-5 block rounded-[1.5rem] bg-violet-50 px-6 py-5 text-center text-xl font-semibold text-violet-700 transition hover:bg-violet-100"
         >
           View All Categories →

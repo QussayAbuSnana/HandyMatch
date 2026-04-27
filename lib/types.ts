@@ -2,6 +2,22 @@ import { Timestamp } from "firebase/firestore";
 
 export type UserRole = "customer" | "professional";
 
+export type DaySchedule = {
+  enabled: boolean;
+  start: string; // "09:00"
+  end: string;   // "17:00"
+};
+
+export type WeeklyAvailability = {
+  sunday:    DaySchedule;
+  monday:    DaySchedule;
+  tuesday:   DaySchedule;
+  wednesday: DaySchedule;
+  thursday:  DaySchedule;
+  friday:    DaySchedule;
+  saturday:  DaySchedule;
+};
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -10,6 +26,8 @@ export interface UserProfile {
   photoURL?: string;
   phone?: string;
   location?: string;
+  availability?: WeeklyAvailability;
+  serviceArea?: string;
   createdAt: Timestamp;
 }
 

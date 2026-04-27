@@ -36,18 +36,30 @@ export default function ProJobsPage() {
   const completed = bookings.filter((b) => b.status === "completed");
 
   const handleAccept = async (booking: Booking) => {
-    await updateBookingStatus(booking.id, "accepted");
-    await createNotification(booking.customerId, "Booking Accepted!", `${booking.professionalName} accepted your booking for ${booking.service}.`, "booking_accepted", booking.id);
+    try {
+      await updateBookingStatus(booking.id, "accepted");
+      await createNotification(booking.customerId, "Booking Accepted!", `${booking.professionalName} accepted your booking for ${booking.service}.`, "booking_accepted", booking.id);
+    } catch (e) {
+      alert("Failed to accept booking: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleDecline = async (booking: Booking) => {
-    await updateBookingStatus(booking.id, "cancelled");
-    await createNotification(booking.customerId, "Booking Declined", `Your booking request for ${booking.service} was declined.`, "booking_declined", booking.id);
+    try {
+      await updateBookingStatus(booking.id, "cancelled");
+      await createNotification(booking.customerId, "Booking Declined", `Your booking request for ${booking.service} was declined.`, "booking_declined", booking.id);
+    } catch (e) {
+      alert("Failed to decline booking: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleComplete = async (booking: Booking) => {
-    await updateBookingStatus(booking.id, "completed");
-    await createNotification(booking.customerId, "Job Completed!", `${booking.professionalName} marked your ${booking.service} job as complete.`, "job_completed", booking.id);
+    try {
+      await updateBookingStatus(booking.id, "completed");
+      await createNotification(booking.customerId, "Job Completed!", `${booking.professionalName} marked your ${booking.service} job as complete.`, "job_completed", booking.id);
+    } catch (e) {
+      alert("Failed to complete booking: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const formatDate = (b: Booking) => {
