@@ -160,11 +160,19 @@ export function subscribeConversations(
 ): Unsubscribe {
   const q = query(
     collection(db, "conversations"),
-    where("participants", "array-contains", uid),
-    orderBy("lastMessageAt", "desc")
+    where("participants", "array-contains", uid)
   );
   return onSnapshot(q,
-    (snap) => { callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Conversation))); },
+    (snap) => {
+      const convs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Conversation));
+      // Sort client-side to avoid needing a composite Firestore index
+      convs.sort((a, b) => {
+        const aS = (a.lastMessageAt as unknown as { seconds: number })?.seconds ?? 0;
+        const bS = (b.lastMessageAt as unknown as { seconds: number })?.seconds ?? 0;
+        return bS - aS;
+      });
+      callback(convs);
+    },
     () => { callback([]); }
   );
 }
