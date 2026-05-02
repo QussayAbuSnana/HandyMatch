@@ -18,6 +18,15 @@ export type WeeklyAvailability = {
   saturday:  DaySchedule;
 };
 
+export interface UserSettings {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  bookingUpdates: boolean;
+  newRequestAlerts: boolean;
+  language: string;
+  profileVisibility: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -28,6 +37,7 @@ export interface UserProfile {
   location?: string;
   availability?: WeeklyAvailability;
   serviceArea?: string;
+  settings?: UserSettings;
   createdAt: Timestamp;
 }
 

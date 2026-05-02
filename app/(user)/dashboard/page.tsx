@@ -197,6 +197,17 @@ export default function CustomerDashboardPage() {
         >
           View All Categories →
         </Link>
+
+        <Link
+          href="/estimate"
+          className="mt-3 flex items-center justify-between rounded-[1.5rem] bg-gradient-to-r from-fuchsia-600 to-violet-600 px-6 py-5 text-white shadow-md transition hover:opacity-95"
+        >
+          <div>
+            <p className="text-xl font-bold">Not sure how much it costs?</p>
+            <p className="mt-1 text-base text-white/85">Get an AI price estimate before you book</p>
+          </div>
+          <Sparkles className="h-8 w-8 shrink-0 text-yellow-300" />
+        </Link>
       </section>
 
       <section className="mx-auto mt-8 max-w-7xl px-5">

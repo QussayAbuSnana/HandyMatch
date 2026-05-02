@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Wrench } from "lucide-react";
@@ -26,8 +26,15 @@ function getFirebaseErrorMessage(code: string): string {
 }
 
 export default function LoginPage() {
-  const { login, loading } = useAuth();
+  const { login, loading, user, userProfile } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (userProfile?.role === "professional") router.replace("/pro/dashboard");
+      else if (userProfile?.role === "customer") router.replace("/dashboard");
+    }
+  }, [loading, user, userProfile, router]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");

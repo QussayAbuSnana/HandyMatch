@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const SERVICES = [
   "Plumbing", "Electrical", "Carpentry", "Painting", "HVAC",
@@ -15,41 +15,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "description is required" }, { status: 400 });
   }
 
-  const message = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 256,
-    messages: [
-      {
-        role: "user",
-        content: `You are a home services classifier for a handyman marketplace called HandyMatch.
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      max_tokens: 256,
+      messages: [
+        {
+          role: "system",
+          content: "You are a home services classifier for HandyMatch marketplace. Respond only with valid JSON, no markdown, no extra text.",
+        },
+        {
+          role: "user",
+          content: `Available service categories: ${SERVICES.join(", ")}.
 
-Available service categories: ${SERVICES.join(", ")}.
+Given this job description: "${description.trim()}"
 
-Given the user's job description below, respond with ONLY valid JSON in this exact shape:
+Respond with ONLY valid JSON:
 {
   "category": "<one of the categories above>",
-  "summary": "<one sentence restatement of the job>",
-  "estimatedHours": <number, realistic estimate>,
+  "summary": "<one sentence restatement>",
+  "estimatedHours": <number>,
   "priceRange": { "min": <number>, "max": <number> }
-}
+}`,
+        },
+      ],
+    });
 
-User description: "${description.trim()}"`,
-      },
-    ],
-  });
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return NextResponse.json({ error: "Failed to parse classifier response" }, { status: 500 });
+    }
 
-  const raw = (message.content[0] as { type: string; text: string }).text.trim();
-
-  // Extract JSON even if model wraps it in markdown fences
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return NextResponse.json({ error: "Failed to parse classifier response" }, { status: 500 });
-  }
-
-  try {
-    const result = JSON.parse(jsonMatch[0]);
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON from classifier" }, { status: 500 });
+    return NextResponse.json(JSON.parse(jsonMatch[0]));
+  } catch (e) {
+    console.error("classify-job error:", e);
+    return NextResponse.json({ error: "AI request failed." }, { status: 500 });
   }
 }
