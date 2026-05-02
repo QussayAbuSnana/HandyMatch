@@ -14,6 +14,14 @@ type SeedResult = {
 };
 
 export default function DevSeedPage() {
+  if (process.env.NODE_ENV === "production") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f8fb]">
+        <p className="text-xl font-semibold text-slate-500">Not available.</p>
+      </div>
+    );
+  }
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SeedResult | null>(null);
 
