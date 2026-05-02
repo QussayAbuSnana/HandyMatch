@@ -270,12 +270,17 @@ export async function getReviewsForPro(proId: string): Promise<Review[]> {
   const q = query(
     collection(db, "reviews"),
     where("subjectId", "==", proId),
-    where("type", "==", "customer_to_pro"),
-    orderBy("createdAt", "desc")
+    where("type", "==", "customer_to_pro")
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
+  const results = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
+  return results.sort((a, b) => {
+    const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+    return bS - aS;
+  });
 }
+
 
 export async function hasReviewed(
   bookingId: string,

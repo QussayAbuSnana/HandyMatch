@@ -17,7 +17,6 @@ export default function UserLayout({
       if (!user) {
         router.replace("/login");
       } else if (userProfile && userProfile.role !== "customer") {
-        // Professional trying to access customer routes
         router.replace("/pro/dashboard");
       }
     }

@@ -53,13 +53,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Cookie helpers (read by middleware for server-side route protection) ──
+  const setRoleCookie = (role: string | null) => {
+    if (role) {
+      document.cookie = `hm_role=${role}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict`;
+    } else {
+      document.cookie = "hm_role=; path=/; max-age=0; SameSite=Strict";
+    }
+  };
+
   // Fetch or create the Firestore user document
   const fetchUserProfile = useCallback(async (firebaseUser: User) => {
     const ref = doc(db, "users", firebaseUser.uid);
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
-      setUserProfile(snap.data() as UserProfile);
+      const profile = snap.data() as UserProfile;
+      setUserProfile(profile);
+      if (profile.role) setRoleCookie(profile.role);
     } else {
       // First time — build profile locally, write it, set state immediately (no second read)
       const newProfile: UserProfile = {
@@ -134,13 +145,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setUserProfile(null);
+    setRoleCookie(null);
   };
 
   const updateUserRole = async (role: UserRole) => {
     if (!user) return;
-    // Update local state immediately so the UI reacts right away
     setUserProfile((prev) => (prev ? { ...prev, role } : prev));
-    // Try to persist to Firestore — silently ignore if not available yet
+    setRoleCookie(role);
     try {
       const ref = doc(db, "users", user.uid);
       await setDoc(ref, { role }, { merge: true });
