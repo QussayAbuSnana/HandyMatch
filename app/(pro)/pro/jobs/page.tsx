@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import ProSideMenu from "@/components/shared/ProSideMenu";
 import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User, MapPin, Clock3, DollarSign, CheckCircle2, XCircle, Wrench, Star } from "lucide-react";
+import TravelTimeBadge from "@/components/shared/TravelTimeBadge";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
@@ -34,6 +35,21 @@ export default function ProJobsPage() {
   const pending = bookings.filter((b) => b.status === "pending");
   const accepted = bookings.filter((b) => b.status === "accepted" || b.status === "in_progress");
   const completed = bookings.filter((b) => b.status === "completed");
+
+  // For a pending request, find the closest accepted job by scheduled time to use as travel origin
+  const getTravelOrigin = (req: Booking): { location: string; label: string } => {
+    const reqTime = (req.scheduledAt as unknown as { seconds: number })?.seconds ?? 0;
+    if (accepted.length > 0) {
+      const closest = accepted.reduce((best, b) => {
+        const bTime = (b.scheduledAt as unknown as { seconds: number })?.seconds ?? 0;
+        const bestTime = (best.scheduledAt as unknown as { seconds: number })?.seconds ?? 0;
+        return Math.abs(bTime - reqTime) < Math.abs(bestTime - reqTime) ? b : best;
+      });
+      if (closest.location) return { location: closest.location, label: "from last job" };
+    }
+    const proLocation = (userProfile as unknown as { location?: string })?.location ?? "";
+    return { location: proLocation, label: "from home" };
+  };
 
   const handleAccept = async (booking: Booking) => {
     try {
@@ -111,7 +127,9 @@ export default function ProJobsPage() {
               <p className="text-xl text-slate-400 text-center py-8">No pending requests.</p>
             ) : (
               <div className="space-y-4">
-                {pending.map((req) => (
+                {pending.map((req) => {
+                  const origin = getTravelOrigin(req);
+                  return (
                   <div key={req.id} className="rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                       <div>
@@ -121,6 +139,15 @@ export default function ProJobsPage() {
                           <span className="flex items-center gap-2"><MapPin className="h-5 w-5" />{req.location}</span>
                           <span className="flex items-center gap-2"><Clock3 className="h-5 w-5" />{formatDate(req)}</span>
                         </div>
+                        {origin.location && req.location && (
+                          <div className="mt-3">
+                            <TravelTimeBadge
+                              origin={origin.location}
+                              destination={req.location}
+                              label={origin.label}
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-start gap-4 md:items-end">
                         <div className="flex items-center gap-2 text-3xl font-extrabold text-violet-600">
@@ -137,7 +164,8 @@ export default function ProJobsPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

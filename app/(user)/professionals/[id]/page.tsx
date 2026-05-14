@@ -6,8 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
 import { WeeklyAvailability } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification } from "@/lib/firestore";
-import { UserProfile, Review } from "@/lib/types";
+import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification, subscribeProBookings } from "@/lib/firestore";
+import { UserProfile, Review, Booking } from "@/lib/types";
 import BookingModal from "@/components/shared/BookingModal";
 
 type Props = { params: Promise<{ id: string }> };
@@ -22,12 +22,15 @@ export default function ProfessionalDetailPage({ params }: Props) {
   const [showBooking, setShowBooking] = useState(false);
   const [booked, setBooked] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [proBookings, setProBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
     getUserProfile(id)
       .then(setPro)
       .finally(() => setLoading(false));
     getReviewsForPro(id).then(setReviews);
+    const unsub = subscribeProBookings(id, setProBookings);
+    return () => unsub();
   }, [id]);
 
   const proData = pro as unknown as {
@@ -39,6 +42,19 @@ export default function ProfessionalDetailPage({ params }: Props) {
 
   const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string }) => {
     if (!user || !userProfile || !pro) return;
+
+    // Last-resort conflict check using the live proBookings snapshot
+    const conflict = proBookings.some((b) => {
+      if (b.status === "cancelled") return false;
+      const ts = b.scheduledAt as { seconds?: number; toDate?: () => Date };
+      let d: Date;
+      if (typeof ts.toDate === "function") d = ts.toDate();
+      else if (ts.seconds) d = new Date(ts.seconds * 1000);
+      else return false;
+      return Math.abs(d.getTime() - data.scheduledAt.getTime()) < 60 * 60 * 1000;
+    });
+    if (conflict) throw new Error("This slot was just booked. Please pick another time.");
+
     await createBooking({
       customerId: user.uid,
       professionalId: pro.uid,
@@ -238,6 +254,20 @@ export default function ProfessionalDetailPage({ params }: Props) {
                   {r.comment && (
                     <p className="mt-2 text-lg text-slate-600 leading-relaxed">{r.comment}</p>
                   )}
+                  {r.images && r.images.length > 0 && (
+                    <div className="mt-3 flex gap-2 flex-wrap">
+                      {r.images.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Review photo ${i + 1}`}
+                            className="h-24 w-24 rounded-2xl object-cover border border-gray-200 transition hover:opacity-90"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -279,6 +309,8 @@ export default function ProfessionalDetailPage({ params }: Props) {
           services={proData.services ?? ["General Service"]}
           hourlyRate={proData.hourlyRate ?? 0}
           customerLocation={userProfile.location ?? ""}
+          availability={proData.availability}
+          existingBookings={proBookings}
           onConfirm={handleBook}
           onClose={() => setShowBooking(false)}
         />

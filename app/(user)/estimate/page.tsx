@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Sparkles, Loader2, DollarSign, Clock3,
-  CheckCircle2, Lightbulb, HelpCircle, ChevronRight, Search,
+  CheckCircle2, Lightbulb, HelpCircle, CalendarDays, SendHorizonal,
 } from "lucide-react";
 
-interface Estimate {
+interface QuestionMsg {
+  type: "question";
+  question: string;
+  options: string[];
+}
+
+interface EstimateMsg {
+  type: "estimate";
   category: string;
   summary: string;
   priceRange: { min: number; max: number };
@@ -18,6 +25,11 @@ interface Estimate {
   questionsToAsk: string[];
 }
 
+type ChatMessage =
+  | { role: "user"; text: string }
+  | { role: "ai-question"; data: QuestionMsg }
+  | { role: "ai-estimate"; data: EstimateMsg };
+
 const COMPLEXITY_STYLE = {
   simple:   { label: "Simple Job",   color: "bg-green-100 text-green-700" },
   moderate: { label: "Moderate Job", color: "bg-amber-100 text-amber-700" },
@@ -25,209 +37,335 @@ const COMPLEXITY_STYLE = {
 };
 
 const EXAMPLES = [
-  "My kitchen tap is dripping and needs replacing",
-  "I need to repaint my living room walls",
-  "The electricity keeps tripping in my apartment",
+  "My kitchen tap is dripping",
+  "I need to repaint my living room",
+  "The electricity keeps tripping",
   "I need a new AC unit installed",
-  "My bathroom tiles are cracked and need fixing",
+  "My bathroom tiles are cracked",
 ];
 
 export default function EstimatePage() {
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [answers, setAnswers] = useState<{ question: string; answer: string }[]>([]);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [error, setError] = useState("");
+  const [answeredIndexes, setAnsweredIndexes] = useState<Set<number>>(new Set());
 
-  const handleEstimate = async (desc?: string) => {
-    const text = (desc ?? description).trim();
-    if (text.length < 5) { setError("Please describe your job in a bit more detail."); return; }
-    setError("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const sendToAI = async (desc: string, currentAnswers: { question: string; answer: string }[]) => {
     setLoading(true);
-    setEstimate(null);
+    setError("");
     try {
-      const res = await fetch("/api/estimate-price", {
+      const res = await fetch("/api/chat-estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: text }),
+        body: JSON.stringify({ description: desc, answers: currentAnswers }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error ?? "Could not generate an estimate. Please try again.");
-        return;
+      if (!res.ok) { setError(data?.error ?? "Something went wrong."); return; }
+
+      if (data.type === "question") {
+        setMessages((prev) => [...prev, { role: "ai-question", data }]);
+      } else {
+        setMessages((prev) => [...prev, { role: "ai-estimate", data }]);
       }
-      setEstimate(data as Estimate);
-      if (desc) setDescription(desc);
     } catch {
-      setError("Could not generate an estimate. Please try again.");
+      setError("Could not reach the AI. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleStart = async (text?: string) => {
+    const desc = (text ?? input).trim();
+    if (desc.length < 5) { setError("Please describe the job in a bit more detail."); return; }
+    setError("");
+    setMessages([{ role: "user", text: desc }]);
+    setAnswers([]);
+    setAnsweredIndexes(new Set());
+    setDescription(desc);
+    setInput("");
+    await sendToAI(desc, []);
+  };
+
+  const handleAnswer = async (questionText: string, answer: string, msgIndex: number) => {
+    if (answeredIndexes.has(msgIndex)) return;
+    setAnsweredIndexes((prev) => new Set(prev).add(msgIndex));
+
+    const newAnswers = [...answers, { question: questionText, answer }];
+    setAnswers(newAnswers);
+    setMessages((prev) => [...prev, { role: "user", text: answer }]);
+    await sendToAI(description, newAnswers);
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    setAnswers([]);
+    setDescription("");
+    setInput("");
+    setError("");
+    setAnsweredIndexes(new Set());
+  };
+
+  const hasEstimate = messages.some((m) => m.role === "ai-estimate");
+
   return (
-    <main className="min-h-screen bg-[#f8f8fb] pb-16">
+    <main className="flex min-h-screen flex-col bg-[#f8f8fb]">
       {/* Header */}
-      <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-6 text-white">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-6 flex items-center justify-between">
+      <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-8 pt-6 text-white">
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-4 flex items-center justify-between">
             <Link href="/dashboard"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
-              <ArrowLeft className="h-6 w-6" />
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
+              <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
               <Sparkles className="h-4 w-4 text-yellow-300" /> AI Estimator
             </div>
           </div>
-          <h1 className="text-4xl font-extrabold md:text-5xl">Price Estimator</h1>
-          <p className="mt-3 text-lg text-white/85">
-            Describe your job in plain language — AI will estimate the cost before you hire anyone.
+          <h1 className="text-3xl font-extrabold">Price Estimator</h1>
+          <p className="mt-1 text-base text-white/85">
+            Describe your job — AI will ask a couple of questions then give you a cost estimate.
           </p>
         </div>
       </section>
 
-      {/* Input */}
-      <section className="mx-auto -mt-5 max-w-3xl px-5">
-        <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-          <label className="mb-3 block text-lg font-bold text-slate-900">What needs to be done?</label>
-          <textarea
-            value={description}
-            onChange={(e) => { setDescription(e.target.value); setEstimate(null); setError(""); }}
-            placeholder="e.g. My bathroom tap is leaking and the water pressure is low…"
-            rows={4}
-            className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-lg text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-          />
+      {/* Chat area */}
+      <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-5 space-y-4 pb-40">
 
-          {error && <p className="mt-2 text-base text-red-600">{error}</p>}
+        {/* Examples — only before first message */}
+        {messages.length === 0 && (
+          <div>
+            <p className="mb-3 text-base font-semibold text-slate-400">Try an example:</p>
+            <div className="flex flex-col gap-2">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  onClick={() => handleStart(ex)}
+                  className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left text-base text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-          <button
-            onClick={() => handleEstimate()}
-            disabled={loading || !description.trim()}
-            className="mt-4 flex w-full items-center justify-center gap-3 rounded-[1.5rem] bg-gradient-to-r from-violet-600 to-fuchsia-500 py-5 text-xl font-bold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
-          >
-            {loading
-              ? <><Loader2 className="h-6 w-6 animate-spin" /> Estimating…</>
-              : <><Sparkles className="h-6 w-6" /> Get AI Estimate</>
-            }
-          </button>
+        {/* Messages */}
+        {messages.map((msg, i) => {
+          if (msg.role === "user") {
+            return (
+              <div key={i} className="flex justify-end">
+                <div className="max-w-[80%] rounded-3xl rounded-br-md bg-violet-600 px-5 py-3 text-base text-white shadow-sm">
+                  {msg.text}
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.role === "ai-question") {
+            const q = msg.data;
+            const answered = answeredIndexes.has(i);
+            return (
+              <div key={i} className="flex flex-col gap-3">
+                {/* AI bubble */}
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="rounded-3xl rounded-tl-md bg-white px-5 py-3 text-base text-slate-800 shadow-sm border border-gray-100">
+                    {q.question}
+                  </div>
+                </div>
+                {/* Answer buttons */}
+                <div className="ml-12 flex flex-wrap gap-2">
+                  {q.options.map((opt) => (
+                    <button
+                      key={opt}
+                      disabled={answered || loading}
+                      onClick={() => handleAnswer(q.question, opt, i)}
+                      className={`rounded-2xl border px-5 py-2 text-base font-semibold transition ${
+                        answered
+                          ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "border-violet-300 bg-white text-violet-700 hover:bg-violet-600 hover:text-white hover:border-violet-600"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.role === "ai-estimate") {
+            const est = msg.data;
+            const complexity = COMPLEXITY_STYLE[est.complexity] ?? COMPLEXITY_STYLE.moderate;
+            return (
+              <div key={i} className="flex flex-col gap-4 mt-2">
+                {/* AI intro bubble */}
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="rounded-3xl rounded-tl-md bg-white px-5 py-3 text-base text-slate-800 shadow-sm border border-gray-100">
+                    Here&apos;s your estimate 👇
+                  </div>
+                </div>
+
+                {/* Estimate card */}
+                <div className="ml-12 space-y-4">
+                  {/* Summary */}
+                  <div className="rounded-[1.5rem] border border-violet-200 bg-violet-50 p-5">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-violet-700">{est.category}</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${complexity.color}`}>
+                        {complexity.label}
+                      </span>
+                    </div>
+                    <p className="text-base text-slate-700">{est.summary}</p>
+                  </div>
+
+                  {/* Price + time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-[1.5rem] border border-gray-200 bg-white p-4 text-center shadow-sm">
+                      <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
+                        <DollarSign className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div className="text-2xl font-extrabold text-slate-900">${est.priceRange.min}–${est.priceRange.max}</div>
+                      <div className="text-sm text-slate-500">Estimated Cost</div>
+                    </div>
+                    <div className="rounded-[1.5rem] border border-gray-200 bg-white p-4 text-center shadow-sm">
+                      <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+                        <Clock3 className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="text-2xl font-extrabold text-slate-900">{est.estimatedHours}h</div>
+                      <div className="text-sm text-slate-500">Estimated Time</div>
+                    </div>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="rounded-[1.5rem] border border-gray-200 bg-white p-5 shadow-sm">
+                    <h3 className="mb-3 text-lg font-bold text-slate-900">Cost Breakdown</h3>
+                    <div className="space-y-2">
+                      {est.breakdown.map((item, j) => (
+                        <div key={j} className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
+                          <span className="text-sm text-slate-700">{item.item}</span>
+                          <span className="text-sm font-bold text-violet-600">{item.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tips */}
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                    <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-900">
+                      <Lightbulb className="h-5 w-5 text-amber-500" /> Tips
+                    </h3>
+                    <div className="space-y-2">
+                      {est.tips.map((tip, j) => (
+                        <div key={j} className="flex items-start gap-2">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                          <p className="text-sm text-slate-700">{tip}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ask the pro */}
+                  <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-5 shadow-sm">
+                    <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-900">
+                      <HelpCircle className="h-5 w-5 text-blue-500" /> Ask the Pro
+                    </h3>
+                    <div className="space-y-2">
+                      {est.questionsToAsk.map((q, j) => (
+                        <div key={j} className="flex items-start gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 text-xs font-bold text-blue-700">{j + 1}</span>
+                          <p className="text-sm text-slate-700">{q}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="rounded-[1.5rem] border border-violet-200 bg-violet-50 p-4">
+                    <p className="mb-3 text-sm font-semibold text-violet-700">
+                      Ready to fix it? Book a {est.category} professional now.
+                    </p>
+                    <Link
+                      href={`/search?service=${encodeURIComponent(est.category)}`}
+                      onClick={() => {
+                        sessionStorage.setItem("hm_booking_prefill", JSON.stringify({
+                          notes: est.summary,
+                          service: est.category,
+                        }));
+                      }}
+                      className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-4 text-base font-bold text-white shadow-lg transition hover:opacity-95"
+                    >
+                      <CalendarDays className="h-5 w-5" />
+                      Book a {est.category} Pro
+                    </Link>
+                  </div>
+
+                  <button
+                    onClick={handleReset}
+                    className="w-full rounded-[1.5rem] border border-gray-200 bg-white py-4 text-base font-semibold text-slate-600 transition hover:bg-gray-50"
+                  >
+                    Estimate a different job
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        })}
+
+        {/* Loading bubble */}
+        {loading && (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div className="rounded-3xl rounded-tl-md bg-white px-5 py-3 shadow-sm border border-gray-100">
+              <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p className="rounded-2xl bg-red-50 px-5 py-3 text-sm text-red-600">{error}</p>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input bar — only shown before chat starts or after reset */}
+      {!hasEstimate && messages.length === 0 && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white/95 px-4 py-4 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center gap-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => { setInput(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && handleStart()}
+              placeholder="Describe your problem…"
+              className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-base text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+            <button
+              onClick={() => handleStart()}
+              disabled={loading || input.trim().length < 5}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg transition hover:bg-violet-700 disabled:opacity-50"
+            >
+              <SendHorizonal className="h-6 w-6" />
+            </button>
+          </div>
         </div>
-      </section>
-
-      {/* Example prompts */}
-      {!estimate && !loading && (
-        <section className="mx-auto max-w-3xl px-5 pt-6">
-          <p className="mb-3 text-lg font-semibold text-slate-500">Try an example:</p>
-          <div className="flex flex-col gap-2">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex}
-                onClick={() => handleEstimate(ex)}
-                className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left text-lg text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50"
-              >
-                <span>{ex}</span>
-                <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Results */}
-      {estimate && (
-        <section className="mx-auto max-w-3xl px-5 pt-6 space-y-5">
-
-          {/* Summary card */}
-          <div className="rounded-[2rem] border border-violet-200 bg-violet-50 p-6 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <span className="text-lg font-bold text-violet-700">{estimate.category}</span>
-              <span className={`rounded-full px-4 py-1 text-sm font-semibold ${COMPLEXITY_STYLE[estimate.complexity]?.color}`}>
-                {COMPLEXITY_STYLE[estimate.complexity]?.label}
-              </span>
-            </div>
-            <p className="text-xl text-slate-700 leading-relaxed">{estimate.summary}</p>
-          </div>
-
-          {/* Price + time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm text-center">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100">
-                <DollarSign className="h-7 w-7 text-emerald-600" />
-              </div>
-              <div className="text-3xl font-extrabold text-slate-900">
-                ${estimate.priceRange.min}–${estimate.priceRange.max}
-              </div>
-              <div className="mt-1 text-lg text-slate-500">Estimated Cost</div>
-            </div>
-            <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm text-center">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100">
-                <Clock3 className="h-7 w-7 text-blue-600" />
-              </div>
-              <div className="text-3xl font-extrabold text-slate-900">
-                {estimate.estimatedHours}h
-              </div>
-              <div className="mt-1 text-lg text-slate-500">Estimated Time</div>
-            </div>
-          </div>
-
-          {/* Cost breakdown */}
-          <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-2xl font-bold text-slate-900">Cost Breakdown</h3>
-            <div className="space-y-3">
-              {estimate.breakdown.map((item, i) => (
-                <div key={i} className="flex items-center justify-between rounded-2xl bg-slate-50 px-5 py-4">
-                  <span className="text-lg text-slate-700">{item.item}</span>
-                  <span className="text-lg font-bold text-violet-600">{item.amount}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-            <h3 className="mb-4 flex items-center gap-2 text-2xl font-bold text-slate-900">
-              <Lightbulb className="h-6 w-6 text-amber-500" /> Tips
-            </h3>
-            <div className="space-y-3">
-              {estimate.tips.map((tip, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-                  <p className="text-lg text-slate-700">{tip}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Questions to ask */}
-          <div className="rounded-[2rem] border border-blue-200 bg-blue-50 p-6 shadow-sm">
-            <h3 className="mb-4 flex items-center gap-2 text-2xl font-bold text-slate-900">
-              <HelpCircle className="h-6 w-6 text-blue-500" /> Ask the Pro
-            </h3>
-            <div className="space-y-3">
-              {estimate.questionsToAsk.map((q, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-200 text-sm font-bold text-blue-700">{i + 1}</span>
-                  <p className="text-lg text-slate-700">{q}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA */}
-          <Link
-            href={`/search?q=${encodeURIComponent(estimate.category)}`}
-            className="flex items-center justify-center gap-3 rounded-[2rem] bg-gradient-to-r from-violet-600 to-fuchsia-500 py-6 text-xl font-bold text-white shadow-lg transition hover:opacity-95"
-          >
-            <Search className="h-6 w-6" />
-            Find a {estimate.category} Professional
-          </Link>
-
-          {/* Try again */}
-          <button
-            onClick={() => { setEstimate(null); setDescription(""); }}
-            className="w-full rounded-[1.5rem] border border-gray-200 bg-white py-4 text-lg font-semibold text-slate-600 transition hover:bg-gray-50"
-          >
-            Estimate a different job
-          </button>
-        </section>
       )}
     </main>
   );
