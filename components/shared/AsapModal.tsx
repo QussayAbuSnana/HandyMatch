@@ -63,10 +63,15 @@ export default function AsapModal({ onClose }: { onClose: () => void }) {
       }
 
       for (const { pro } of scored.slice(0, 5)) {
-        const [profile, bookings] = await Promise.all([
-          getUserProfile(pro.uid),
-          getProBookings(pro.uid),
-        ]);
+        const profile = await getUserProfile(pro.uid);
+        // Try to fetch bookings for conflict-aware slot picking;
+        // falls back to empty array if Firestore rules deny access.
+        let bookings: Awaited<ReturnType<typeof getProBookings>> = [];
+        try {
+          bookings = await getProBookings(pro.uid);
+        } catch {
+          // permission denied — proceed without conflict check
+        }
         const avail = (profile as unknown as { availability?: WeeklyAvailability })?.availability;
         const asap = findAsapSlot(avail, bookings);
         if (asap) {
