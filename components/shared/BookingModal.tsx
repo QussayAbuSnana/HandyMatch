@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { X, CalendarDays, MapPin, FileText, ChevronDown, Sparkles, Loader2, Clock3 } from "lucide-react";
+import { X, CalendarDays, MapPin, FileText, ChevronDown, Sparkles, Loader2, Clock3, Zap } from "lucide-react";
 import { WeeklyAvailability } from "@/lib/types";
 
 interface ClassifyResult {
@@ -57,6 +57,45 @@ function getTakenHours(date: string, bookings: Array<{ scheduledAt: unknown; sta
     }
   });
   return taken;
+}
+
+/** Find the earliest available date + slot, up to 30 days out */
+function findAsapSlot(
+  availability: WeeklyAvailability | undefined,
+  existingBookings: Array<{ scheduledAt: unknown; status?: string }>
+): { date: string; slot: string } | null {
+  const now = new Date();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const dateStr = [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, "0"),
+      String(d.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const dayKey = DAY_KEYS[d.getDay()];
+
+    let slots: string[];
+    if (!availability) {
+      slots = generateSlots("08:00", "18:00");
+    } else {
+      const schedule = availability[dayKey];
+      if (!schedule.enabled) continue;
+      slots = generateSlots(schedule.start, schedule.end);
+    }
+
+    const taken = getTakenHours(dateStr, existingBookings);
+    const currentHour = i === 0 ? now.getHours() : -1;
+
+    for (const slot of slots) {
+      const [h] = slot.split(":").map(Number);
+      if (taken.has(slot)) continue;
+      if (h <= currentHour) continue; // skip past slots on today
+      return { date: dateStr, slot };
+    }
+  }
+  return null;
 }
 
 function formatSlot(slot: string): string {
@@ -251,9 +290,27 @@ export default function BookingModal({
 
           {/* Date picker */}
           <div>
-            <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
-              <CalendarDays className="inline h-4 w-4 mr-1" />Date
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-gray-600 ml-1">
+                <CalendarDays className="inline h-4 w-4 mr-1" />Date
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const asap = findAsapSlot(availability, existingBookings);
+                  if (asap) {
+                    setDate(asap.date);
+                    setSelectedSlot(asap.slot);
+                    setError("");
+                  } else {
+                    setError("No available slots found in the next 30 days.");
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-1.5 text-sm font-bold text-white hover:bg-emerald-600 transition"
+              >
+                <Zap className="h-3.5 w-3.5" /> ASAP
+              </button>
+            </div>
             <input
               type="date"
               min={today}
