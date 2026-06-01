@@ -136,7 +136,7 @@ export default function ProJobsPage() {
                         <h3 className="text-2xl font-bold text-slate-900">{req.customerName}</h3>
                         <p className="mt-2 text-xl text-slate-700">{req.service}</p>
                         {req.notes && (
-                          <p className="mt-2 rounded-2xl bg-violet-50 border border-violet-100 px-4 py-3 text-lg text-slate-600 italic">"{req.notes}"</p>
+                          <p className="mt-2 rounded-2xl bg-violet-50 border border-violet-100 px-4 py-3 text-lg text-slate-600 italic">&quot;{req.notes}&quot;</p>
                         )}
                         <div className="mt-3 flex flex-col gap-2 text-lg text-slate-500 md:flex-row md:items-center md:gap-4">
                           <span className="flex items-center gap-2"><MapPin className="h-5 w-5" />{req.location}</span>
@@ -196,7 +196,7 @@ export default function ProJobsPage() {
                         <h3 className="text-2xl font-bold text-slate-900">{job.customerName}</h3>
                         <p className="mt-2 text-xl text-slate-700">{job.service}</p>
                         {job.notes && (
-                          <p className="mt-2 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-lg text-slate-600 italic">"{job.notes}"</p>
+                          <p className="mt-2 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-lg text-slate-600 italic">&quot;{job.notes}&quot;</p>
                         )}
                         <div className="mt-3 flex flex-col gap-2 text-lg text-slate-500 md:flex-row md:items-center md:gap-4">
                           <span className="flex items-center gap-2"><Clock3 className="h-5 w-5" />{formatDate(job)}</span>
@@ -243,6 +243,9 @@ export default function ProJobsPage() {
                       <div>
                         <h3 className="text-2xl font-bold text-slate-900">{job.customerName}</h3>
                         <p className="mt-2 text-xl text-slate-700">{job.service}</p>
+                        {job.notes && (
+                          <p className="mt-2 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-lg text-slate-600 italic">&quot;{job.notes}&quot;</p>
+                        )}
                         <div className="mt-3 flex flex-col gap-2 text-lg text-slate-500 md:flex-row md:items-center md:gap-4">
                           <span className="flex items-center gap-2"><Clock3 className="h-5 w-5" />{formatDate(job)}</span>
                           <span className="flex items-center gap-2"><MapPin className="h-5 w-5" />{job.location}</span>
