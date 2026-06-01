@@ -4,10 +4,6 @@ import { useState } from "react";
 import { Loader2, CheckCircle2, XCircle, Database } from "lucide-react";
 
 export default function SeedPage() {
-  if (process.env.NODE_ENV === "production") {
-    return <div className="min-h-screen flex items-center justify-center text-slate-500 text-xl">Not available in production.</div>;
-  }
-
   return <SeedUI />;
 }
 
