@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft, Clock3, CheckCircle2, XCircle, CalendarDays,
-  Loader2, Star, MapPin, DollarSign, Ban,
+  Star, MapPin, DollarSign, Ban,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeCustomerBookings, hasReviewed, updateBookingStatus, createNotification } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
 import ReviewModal from "@/components/shared/ReviewModal";
+import CancelReasonModal from "@/components/shared/CancelReasonModal";
 
 type Tab = "active" | "completed" | "cancelled";
 
@@ -30,7 +31,7 @@ export default function BookingsPage() {
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const [activeReview, setActiveReview] = useState<Booking | null>(null);
   const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "active");
-  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -56,21 +57,18 @@ export default function BookingsPage() {
     return unsub;
   }, [user]);
 
-  const handleCancel = async (b: Booking) => {
-    if (!confirm(`Cancel your booking with ${b.professionalName}?`)) return;
-    setCancelling(b.id);
-    try {
-      await updateBookingStatus(b.id, "cancelled");
-      await createNotification(
-        b.professionalId,
-        "Booking Cancelled",
-        `${b.customerName} cancelled their ${b.service} booking.`,
-        "booking_cancelled",
-        b.id
-      );
-    } finally {
-      setCancelling(null);
-    }
+  const handleCancel = async (reason: string) => {
+    if (!cancelTarget) return;
+    const b = cancelTarget;
+    setCancelTarget(null);
+    await updateBookingStatus(b.id, "cancelled", { cancelReason: reason });
+    await createNotification(
+      b.professionalId,
+      "Booking Cancelled",
+      `${b.customerName} cancelled their ${b.service} booking. Reason: ${reason}`,
+      "booking_cancelled",
+      b.id
+    );
   };
 
   const formatScheduled = (b: Booking) => {
@@ -151,6 +149,7 @@ export default function BookingsPage() {
               const meta = STATUS_META[b.status] ?? STATUS_META.pending;
               const canCancel = b.status === "pending" || b.status === "accepted";
               const canReview = b.status === "completed" && reviewed[b.id] === false;
+              const cancelReason = (b as unknown as { cancelReason?: string }).cancelReason;
               return (
                 <div key={b.id} className="rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -207,18 +206,19 @@ export default function BookingsPage() {
                       )}
                       {canCancel && (
                         <button
-                          onClick={() => handleCancel(b)}
-                          disabled={cancelling === b.id}
-                          className="flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-base font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                          onClick={() => setCancelTarget(b)}
+                          className="flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-base font-semibold text-red-600 hover:bg-red-50 transition"
                         >
-                          {cancelling === b.id
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Ban className="h-4 w-4" />}
-                          Cancel
+                          <Ban className="h-4 w-4" /> Cancel
                         </button>
                       )}
                       {b.status === "cancelled" && (
-                        <XCircle className="h-6 w-6 text-red-400" />
+                        <div className="flex flex-col items-end gap-1">
+                          <XCircle className="h-6 w-6 text-red-400" />
+                          {cancelReason && (
+                            <span className="text-sm text-slate-400 italic text-right max-w-[160px]">"{cancelReason}"</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -228,6 +228,14 @@ export default function BookingsPage() {
           </div>
         )}
       </section>
+
+      {cancelTarget && (
+        <CancelReasonModal
+          professionalName={cancelTarget.professionalName}
+          onConfirm={handleCancel}
+          onClose={() => setCancelTarget(null)}
+        />
+      )}
 
       {activeReview && userProfile && (
         <ReviewModal
