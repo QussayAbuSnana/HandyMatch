@@ -13,9 +13,9 @@ import { Notification } from "@/lib/types";
 
 function getCustomerAction(n: Notification): { href: string; label: string } | null {
   switch (n.type) {
-    case "booking_accepted":  return { href: "/profile/bookings", label: "View Booking" };
-    case "booking_declined":  return { href: "/profile/bookings", label: "View Bookings" };
-    case "job_completed":     return { href: "/profile/bookings", label: "Leave a Review" };
+    case "booking_accepted":  return { href: "/profile/bookings?tab=active",   label: "View Booking" };
+    case "booking_declined":  return { href: "/profile/bookings?tab=cancelled", label: "View Bookings" };
+    case "job_completed":     return { href: n.linkId ? `/profile/bookings?review=${n.linkId}` : "/profile/bookings", label: "Leave a Review" };
     case "new_message":       return { href: n.linkId ? `/messages/${n.linkId}` : "/messages", label: "Open Message" };
     default:                  return { href: "/profile/bookings", label: "View Bookings" };
   }
