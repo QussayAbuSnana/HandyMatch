@@ -70,7 +70,7 @@ Estimate format:
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
-      max_tokens: 512,
+      max_tokens: 1024,
       messages: [
         {
           role: "system",
@@ -84,7 +84,11 @@ Estimate format:
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: "Could not parse response." }, { status: 500 });
 
-    return NextResponse.json(JSON.parse(match[0]));
+    // Remove newlines inside JSON string values to prevent parse errors
+    const cleaned = match[0].replace(/("(?:[^"\\]|\\.)*")/g, (s) =>
+      s.replace(/\n/g, " ").replace(/\r/g, "")
+    );
+    return NextResponse.json(JSON.parse(cleaned));
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("chat-estimate error:", msg);
