@@ -2,13 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Bell, Briefcase, MessageSquare, Star,
-  Clock3, CheckCircle2, XCircle, CheckCheck, Home, Search, User,
+  Clock3, CheckCircle2, XCircle, CheckCheck, Home, Search, User, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firestore";
 import { Notification } from "@/lib/types";
+
+function getCustomerAction(n: Notification): { href: string; label: string } | null {
+  switch (n.type) {
+    case "booking_accepted":  return { href: "/profile/bookings", label: "View Booking" };
+    case "booking_declined":  return { href: "/profile/bookings", label: "View Bookings" };
+    case "job_completed":     return { href: "/profile/bookings", label: "Leave a Review" };
+    case "new_message":       return { href: n.linkId ? `/messages/${n.linkId}` : "/messages", label: "Open Message" };
+    default:                  return { href: "/profile/bookings", label: "View Bookings" };
+  }
+}
 
 const TYPE_STYLE: Record<string, { icon: typeof Bell; wrap: string; color: string; badge: string; badgeStyle: string }> = {
   booking_request:   { icon: Briefcase,     wrap: "bg-violet-100", color: "text-violet-600", badge: "Request",    badgeStyle: "bg-violet-100 text-violet-700" },
@@ -31,6 +42,7 @@ function timeAgo(n: Notification): string {
 
 export default function CustomerNotificationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -46,8 +58,10 @@ export default function CustomerNotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleRead = (n: Notification) => {
+  const handleClick = (n: Notification) => {
     if (!n.read) markNotificationRead(n.id);
+    const action = getCustomerAction(n);
+    if (action) router.push(action.href);
   };
 
   const handleMarkAll = async () => {
@@ -99,7 +113,7 @@ export default function CustomerNotificationsPage() {
               return (
                 <div
                   key={item.id}
-                  onClick={() => handleRead(item)}
+                  onClick={() => handleClick(item)}
                   className={`rounded-[2rem] border p-5 shadow-sm transition hover:shadow-md cursor-pointer ${
                     item.read ? "border-gray-200 bg-white" : "border-violet-200 bg-violet-50"
                   }`}
@@ -117,6 +131,11 @@ export default function CustomerNotificationsPage() {
                         {!item.read && <span className="h-2.5 w-2.5 rounded-full bg-violet-500" />}
                       </div>
                       <p className="text-lg text-slate-600">{item.body}</p>
+                      {(() => { const a = getCustomerAction(item); return a ? (
+                        <div className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white">
+                          {a.label} <ChevronRight className="h-4 w-4" />
+                        </div>
+                      ) : null; })()}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-slate-400 shrink-0 pt-1">
                       <Clock3 className="h-4 w-4" />

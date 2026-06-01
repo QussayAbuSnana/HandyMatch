@@ -2,13 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Bell, Briefcase, MessageSquare, Star,
-  Clock3, CheckCircle2, XCircle, CheckCheck,
+  Clock3, CheckCircle2, XCircle, CheckCheck, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firestore";
 import { Notification } from "@/lib/types";
+
+function getProAction(n: Notification): { href: string; label: string } | null {
+  switch (n.type) {
+    case "booking_request":  return { href: "/pro/jobs",    label: "Accept or Decline" };
+    case "new_message":      return { href: n.linkId ? `/pro/messages/${n.linkId}` : "/pro/messages", label: "Open Message" };
+    case "new_review":       return { href: "/pro/profile", label: "View Review" };
+    case "job_completed":    return { href: "/pro/jobs",    label: "View Jobs" };
+    default:                 return { href: "/pro/jobs",    label: "View Jobs" };
+  }
+}
 
 const TYPE_STYLE: Record<string, { icon: typeof Bell; wrap: string; color: string; badge: string; badgeStyle: string }> = {
   booking_request:   { icon: Briefcase,     wrap: "bg-violet-100", color: "text-violet-600", badge: "New Request",  badgeStyle: "bg-violet-100 text-violet-700" },
@@ -32,6 +43,7 @@ function timeAgo(n: Notification): string {
 
 export default function ProNotificationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -47,8 +59,10 @@ export default function ProNotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleRead = (n: Notification) => {
+  const handleClick = (n: Notification) => {
     if (!n.read) markNotificationRead(n.id);
+    const action = getProAction(n);
+    if (action) router.push(action.href);
   };
 
   const handleMarkAll = async () => {
@@ -136,7 +150,7 @@ export default function ProNotificationsPage() {
               return (
                 <div
                   key={item.id}
-                  onClick={() => handleRead(item)}
+                  onClick={() => handleClick(item)}
                   className={`rounded-[2rem] border p-5 shadow-sm transition hover:shadow-md cursor-pointer ${
                     item.read ? "border-gray-200 bg-white" : "border-violet-200 bg-violet-50"
                   }`}
@@ -157,6 +171,11 @@ export default function ProNotificationsPage() {
                           )}
                         </div>
                         <p className="text-lg leading-8 text-slate-600">{item.body}</p>
+                        {(() => { const a = getProAction(item); return a ? (
+                          <div className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white">
+                            {a.label} <ChevronRight className="h-4 w-4" />
+                          </div>
+                        ) : null; })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500 md:pt-1 shrink-0">
