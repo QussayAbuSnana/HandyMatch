@@ -64,9 +64,10 @@ export async function createBooking(
 
 export async function updateBookingStatus(
   bookingId: string,
-  status: Booking["status"]
+  status: Booking["status"],
+  extra?: Record<string, unknown>
 ): Promise<void> {
-  await updateDoc(doc(db, "bookings", bookingId), { status });
+  await updateDoc(doc(db, "bookings", bookingId), { status, ...extra });
 }
 
 /** Bookings where user is the customer */
