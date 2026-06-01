@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft, Clock3, CheckCircle2, XCircle, CalendarDays,
   Loader2, Star, MapPin, DollarSign, Ban,
@@ -23,11 +24,12 @@ const STATUS_META: Record<string, { label: string; badge: string }> = {
 
 export default function BookingsPage() {
   const { user, userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const [activeReview, setActiveReview] = useState<Booking | null>(null);
-  const [tab, setTab] = useState<Tab>("active");
+  const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "active");
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,6 +42,16 @@ export default function BookingsPage() {
         done.map(async (b) => [b.id, await hasReviewed(b.id, user.uid)] as [string, boolean])
       );
       setReviewed(Object.fromEntries(checks));
+
+      // Auto-open review modal if ?review=<bookingId> is in the URL
+      const reviewId = searchParams.get("review");
+      if (reviewId) {
+        const booking = data.find((b) => b.id === reviewId && b.status === "completed");
+        if (booking) {
+          setTab("completed");
+          setActiveReview(booking);
+        }
+      }
     });
     return unsub;
   }, [user]);
