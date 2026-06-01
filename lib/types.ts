@@ -109,5 +109,6 @@ export interface Review {
   type: "customer_to_pro" | "pro_to_customer";
   rating: number;
   comment: string;
+  images?: string[];
   createdAt: Timestamp;
 }

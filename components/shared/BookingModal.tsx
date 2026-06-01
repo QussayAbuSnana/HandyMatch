@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, CalendarDays, MapPin, FileText, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { X, CalendarDays, MapPin, FileText, ChevronDown, Sparkles, Loader2, Clock3, Zap } from "lucide-react";
+import { WeeklyAvailability } from "@/lib/types";
+import { DAY_KEYS, generateSlots, getTakenHours, findAsapSlot, formatSlot } from "@/lib/booking-utils";
 
 interface ClassifyResult {
   category: string;
@@ -15,24 +17,85 @@ interface Props {
   services: string[];
   hourlyRate: number;
   customerLocation: string;
+  availability?: WeeklyAvailability;
+  existingBookings?: Array<{ scheduledAt: unknown; status?: string }>;
   onConfirm: (data: { service: string; scheduledAt: Date; location: string; notes: string }) => Promise<void>;
   onClose: () => void;
 }
 
+
 export default function BookingModal({
-  professionalName, services, hourlyRate, customerLocation, onConfirm, onClose,
+  professionalName, services, hourlyRate, customerLocation,
+  availability, existingBookings = [],
+  onConfirm, onClose,
 }: Props) {
-  const [service, setService] = useState(services[0] ?? "");
+  const [service, setService] = useState(() => {
+    try {
+      const prefill = JSON.parse(sessionStorage.getItem("hm_booking_prefill") ?? "{}");
+      const match = services.find((s) => s.toLowerCase() === (prefill.service ?? "").toLowerCase());
+      return match ?? services[0] ?? "";
+    } catch { return services[0] ?? ""; }
+  });
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("09:00");
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [location, setLocation] = useState(customerLocation);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(() => {
+    try {
+      const prefill = JSON.parse(sessionStorage.getItem("hm_booking_prefill") ?? "{}");
+      return prefill.notes ?? "";
+    } catch { return ""; }
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [classifying, setClassifying] = useState(false);
   const [suggestion, setSuggestion] = useState<ClassifyResult | null>(null);
 
+  // Clear prefill from sessionStorage once consumed
+  useEffect(() => {
+    sessionStorage.removeItem("hm_booking_prefill");
+  }, []);
+
   const today = new Date().toISOString().split("T")[0];
+
+  // Compute slots whenever date changes
+  const { slots, dayEnabled, dayLabel } = useMemo(() => {
+    if (!date) return { slots: [], dayEnabled: true, dayLabel: "" };
+
+    const dayIndex = new Date(date + "T12:00:00").getDay(); // use noon to avoid DST issues
+    const dayKey = DAY_KEYS[dayIndex];
+    const label = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+
+    if (!availability) {
+      // No availability set — generate default 8am-6pm slots
+      return { slots: generateSlots("08:00", "18:00"), dayEnabled: true, dayLabel: label };
+    }
+
+    const daySchedule = availability[dayKey];
+    if (!daySchedule.enabled) {
+      return { slots: [], dayEnabled: false, dayLabel: label };
+    }
+
+    return { slots: generateSlots(daySchedule.start, daySchedule.end), dayEnabled: true, dayLabel: label };
+  }, [date, availability]);
+
+  const takenHours = useMemo(
+    () => (date ? getTakenHours(date, existingBookings) : new Set<string>()),
+    [date, existingBookings]
+  );
+
+  // If a selected slot gets booked by someone else in real-time, clear it
+  useEffect(() => {
+    if (selectedSlot && takenHours.has(selectedSlot)) {
+      setSelectedSlot(null);
+      setError("This slot was just booked by someone else. Please choose another time.");
+    }
+  }, [takenHours, selectedSlot]);
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    setSelectedSlot(null);
+    setError("");
+  };
 
   const handleClassify = async () => {
     if (!notes.trim()) { setError("Describe the job first, then click Classify."); return; }
@@ -48,10 +111,7 @@ export default function BookingModal({
       if (!res.ok) throw new Error();
       const data: ClassifyResult = await res.json();
       setSuggestion(data);
-      // Auto-select matched service if it exists in pro's list
-      const match = services.find(
-        (s) => s.toLowerCase() === data.category.toLowerCase()
-      );
+      const match = services.find((s) => s.toLowerCase() === data.category.toLowerCase());
       if (match) setService(match);
     } catch {
       setError("Could not classify the job. Try again or select a service manually.");
@@ -64,14 +124,16 @@ export default function BookingModal({
     e.preventDefault();
     if (!service) { setError("Please select a service."); return; }
     if (!date) { setError("Please pick a date."); return; }
+    if (!selectedSlot) { setError("Please select a time slot."); return; }
     if (!location.trim()) { setError("Please enter a location."); return; }
     setError("");
     setSubmitting(true);
     try {
-      const scheduledAt = new Date(`${date}T${time}:00`);
+      const [h] = selectedSlot.split(":").map(Number);
+      const scheduledAt = new Date(`${date}T${String(h).padStart(2, "0")}:00:00`);
       await onConfirm({ service, scheduledAt, location: location.trim(), notes: notes.trim() });
-    } catch {
-      setError("Failed to send booking request. Please try again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to send booking request. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -92,7 +154,7 @@ export default function BookingModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Notes first — drives AI classify */}
+          {/* Notes + AI classify */}
           <div>
             <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
               <FileText className="inline h-4 w-4 mr-1" />Describe the job
@@ -115,7 +177,7 @@ export default function BookingModal({
             </button>
           </div>
 
-          {/* AI suggestion card */}
+          {/* AI suggestion */}
           {suggestion && (
             <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-5 py-4 space-y-1">
               <p className="text-sm font-bold text-fuchsia-700 uppercase tracking-wide">AI Suggestion</p>
@@ -145,30 +207,84 @@ export default function BookingModal({
             </div>
           </div>
 
-          {/* Date + Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
+          {/* Date picker */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-gray-600 ml-1">
                 <CalendarDays className="inline h-4 w-4 mr-1" />Date
               </label>
-              <input
-                type="date"
-                min={today}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 text-lg"
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  const asap = findAsapSlot(availability, existingBookings);
+                  if (asap) {
+                    setDate(asap.date);
+                    setSelectedSlot(asap.slot);
+                    setError("");
+                  } else {
+                    setError("No available slots found in the next 30 days.");
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-1.5 text-sm font-bold text-white hover:bg-emerald-600 transition"
+              >
+                <Zap className="h-3.5 w-3.5" /> ASAP
+              </button>
             </div>
-            <div>
-              <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">Time</label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-4 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 text-lg"
-              />
-            </div>
+            <input
+              type="date"
+              min={today}
+              value={date}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="w-full px-4 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 text-lg"
+            />
           </div>
+
+          {/* Time slot picker */}
+          {date && (
+            <div>
+              <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
+                <Clock3 className="inline h-4 w-4 mr-1" />Available Time Slots — {dayLabel}
+              </label>
+
+              {!dayEnabled ? (
+                <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-4 text-base text-red-700 font-medium">
+                  {professionalName} is not available on {dayLabel}s. Please choose a different date.
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="rounded-2xl bg-gray-50 border border-gray-200 px-5 py-4 text-base text-slate-500">
+                  No slots available for this day.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {slots.map((slot) => {
+                    const taken = takenHours.has(slot);
+                    const selected = selectedSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={taken}
+                        onClick={() => { setSelectedSlot(slot); setError(""); }}
+                        className={`rounded-2xl py-3 text-base font-semibold transition ${
+                          taken
+                            ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                            : selected
+                            ? "bg-violet-600 text-white shadow-md"
+                            : "bg-gray-50 text-slate-700 border border-gray-200 hover:border-violet-300 hover:bg-violet-50"
+                        }`}
+                      >
+                        {taken ? (
+                          <span>{formatSlot(slot)}</span>
+                        ) : (
+                          formatSlot(slot)
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Location */}
           <div>

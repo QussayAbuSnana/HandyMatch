@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,6 +9,8 @@ import {
   ChevronRight, LogOut,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { subscribeCustomerBookings } from "@/lib/firestore";
+import { Booking } from "@/lib/types";
 import { BellButton } from "@/components/shared/CustomerNavBar";
 import SideMenu from "@/components/shared/SideMenu";
 
@@ -20,9 +22,18 @@ const menuItems = [
 ];
 
 export default function ProfilePage() {
-  const { userProfile, logout } = useAuth();
+  const { user, userProfile, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeCustomerBookings(user.uid, setBookings);
+  }, [user]);
+
+  const totalJobs = bookings.filter((b) => b.status !== "cancelled").length;
+  const completedJobs = bookings.filter((b) => b.status === "completed").length;
 
   const handleLogout = async () => {
     await logout();
@@ -68,9 +79,9 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-3 gap-6 text-center">
             {[
-              { value: "—", label: "Jobs Posted" },
-              { value: "—", label: "Completed" },
-              { value: "—", label: "Rating" },
+              { value: totalJobs, label: "Jobs Posted" },
+              { value: completedJobs, label: "Completed" },
+              { value: completedJobs > 0 ? "★" : "—", label: "Reviewed" },
             ].map((s) => (
               <div key={s.label}>
                 <div className="text-4xl font-bold">{s.value}</div>

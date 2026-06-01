@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Menu, Search, MapPin, Star, Clock3,
   Home, MessageSquare, User, Sparkles, Check,
-  Droplets, Zap, Hammer, Paintbrush, TrendingUp,
+  Droplets, Zap, Hammer, Paintbrush, TrendingUp, CalendarDays,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -13,6 +13,7 @@ import { getProfessionals } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
 import { BellButton } from "@/components/shared/CustomerNavBar";
 import SideMenu from "@/components/shared/SideMenu";
+import AsapModal from "@/components/shared/AsapModal";
 
 const categories = [
   {
@@ -71,6 +72,7 @@ export default function CustomerDashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [topPros, setTopPros] = useState<UserProfile[]>([]);
   const [searchInput, setSearchInput] = useState("");
+  const [asapOpen, setAsapOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +97,7 @@ export default function CustomerDashboardPage() {
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {asapOpen && <AsapModal onClose={() => setAsapOpen(false)} />}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900">
@@ -146,6 +149,14 @@ export default function CustomerDashboardPage() {
             </button>
           </form>
 
+          <button
+            onClick={() => setAsapOpen(true)}
+            className="mt-4 w-full flex items-center justify-center gap-3 rounded-[2rem] bg-emerald-500 py-5 text-xl font-extrabold text-white shadow-lg hover:bg-emerald-600 active:scale-95 transition-all"
+          >
+            <Zap className="h-6 w-6" />
+            Book ASAP — Get Help Now
+          </button>
+
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {[
               { value: "500+", label: "Professionals" },
@@ -196,6 +207,17 @@ export default function CustomerDashboardPage() {
           className="mt-5 block rounded-[1.5rem] bg-violet-50 px-6 py-5 text-center text-xl font-semibold text-violet-700 transition hover:bg-violet-100"
         >
           View All Categories →
+        </Link>
+
+        <Link
+          href="/profile/bookings"
+          className="mt-3 flex items-center justify-between rounded-[1.5rem] border border-gray-200 bg-white px-6 py-5 shadow-sm transition hover:shadow-md"
+        >
+          <div>
+            <p className="text-xl font-bold text-slate-900">My Bookings</p>
+            <p className="mt-1 text-base text-slate-500">Track and manage your appointments</p>
+          </div>
+          <CalendarDays className="h-8 w-8 shrink-0 text-violet-500" />
         </Link>
 
         <Link
