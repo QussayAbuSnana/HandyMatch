@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Menu, Search, MapPin, Star, Clock3,
   Home, MessageSquare, User, Sparkles, Check,
-  Droplets, Zap, Hammer, Paintbrush, TrendingUp,
+  Droplets, Zap, Hammer, Paintbrush, TrendingUp, CalendarDays,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -207,6 +207,17 @@ export default function CustomerDashboardPage() {
           className="mt-5 block rounded-[1.5rem] bg-violet-50 px-6 py-5 text-center text-xl font-semibold text-violet-700 transition hover:bg-violet-100"
         >
           View All Categories →
+        </Link>
+
+        <Link
+          href="/profile/bookings"
+          className="mt-3 flex items-center justify-between rounded-[1.5rem] border border-gray-200 bg-white px-6 py-5 shadow-sm transition hover:shadow-md"
+        >
+          <div>
+            <p className="text-xl font-bold text-slate-900">My Bookings</p>
+            <p className="mt-1 text-base text-slate-500">Track and manage your appointments</p>
+          </div>
+          <CalendarDays className="h-8 w-8 shrink-0 text-violet-500" />
         </Link>
 
         <Link
