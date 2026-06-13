@@ -5,7 +5,7 @@ import { X, Zap, Loader2, Star, MapPin, Clock3, CheckCircle2, ChevronRight } fro
 import { useAuth } from "@/lib/auth-context";
 import { getProfessionals, getUserProfile, getProBookings, createBooking, createNotification } from "@/lib/firestore";
 import { UserProfile, WeeklyAvailability } from "@/lib/types";
-import { findAsapSlot, formatSlot } from "@/lib/booking-utils";
+import { findAsapSlot, formatSlot, formatSlotRange } from "@/lib/booking-utils";
 import { Timestamp } from "firebase/firestore";
 
 type Step = "input" | "loading" | "result" | "confirming" | "success" | "error";
@@ -16,6 +16,7 @@ interface AsapResult {
   slot: string;
   category: string;
   summary: string;
+  durationHours: number;
 }
 
 export default function AsapModal({ onClose }: { onClose: () => void }) {
@@ -39,7 +40,8 @@ export default function AsapModal({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({ description }),
       });
       if (!classifyRes.ok) throw new Error("Could not classify the job.");
-      const { category, summary } = await classifyRes.json();
+      const { category, summary, estimatedHours } = await classifyRes.json();
+      const durationHours = Math.max(1, Math.round(estimatedHours ?? 1));
 
       const pros = await getProfessionals();
 
@@ -73,9 +75,9 @@ export default function AsapModal({ onClose }: { onClose: () => void }) {
           // permission denied — proceed without conflict check
         }
         const avail = (profile as unknown as { availability?: WeeklyAvailability })?.availability;
-        const asap = findAsapSlot(avail, bookings);
+        const asap = findAsapSlot(avail, bookings, durationHours);
         if (asap) {
-          setResult({ pro, date: asap.date, slot: asap.slot, category, summary });
+          setResult({ pro, date: asap.date, slot: asap.slot, category, summary, durationHours });
           setStep("result");
           return;
         }
@@ -107,6 +109,7 @@ export default function AsapModal({ onClose }: { onClose: () => void }) {
         location: location.trim() || "TBD",
         price: proData.hourlyRate ?? 0,
         notes: result.summary,
+        durationHours: result.durationHours,
       });
       await createNotification(
         result.pro.uid,
@@ -214,11 +217,18 @@ export default function AsapModal({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-                <div className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
-                  <Clock3 className="h-4 w-4" /> Earliest Available Slot
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
+                    <Clock3 className="h-4 w-4" /> Earliest Available Slot
+                  </div>
+                  {result.durationHours > 1 && (
+                    <span className="rounded-full bg-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                      {result.durationHours}h job
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-xl font-extrabold text-slate-900">
-                  {formatDate(result.date)} · {formatSlot(result.slot)}
+                  {formatDate(result.date)} · {formatSlotRange(result.slot, result.durationHours)}
                 </p>
               </div>
 

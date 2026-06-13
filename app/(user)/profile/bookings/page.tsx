@@ -144,7 +144,7 @@ export default function BookingsPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             {shown.map((b) => {
               const meta = STATUS_META[b.status] ?? STATUS_META.pending;
               const canCancel = b.status === "pending" || b.status === "accepted";

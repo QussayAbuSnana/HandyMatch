@@ -253,9 +253,9 @@ export default function CustomerDashboardPage() {
           </Link>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {topPros.length === 0 ? (
-            <div className="rounded-[2rem] border border-gray-200 bg-white p-8 text-center text-xl text-slate-400 shadow-sm">
+            <div className="col-span-full rounded-[2rem] border border-gray-200 bg-white p-8 text-center text-xl text-slate-400 shadow-sm">
               No professionals yet. Check back soon!
             </div>
           ) : (
@@ -265,40 +265,38 @@ export default function CustomerDashboardPage() {
                 <Link
                   key={pro.uid}
                   href={`/professionals/${pro.uid}`}
-                  className="flex flex-col gap-5 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg hover:-translate-y-0.5"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-4xl font-bold shrink-0">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-2xl font-bold shrink-0">
                       {pro.displayName?.[0] ?? "?"}
                     </div>
-                    <div className="pt-1">
-                      <h3 className="text-2xl font-bold text-slate-900">{pro.displayName}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-bold text-slate-900 truncate">{pro.displayName}</h3>
                       {d.rating ? (
-                        <div className="mt-2 flex items-center gap-2 text-lg text-slate-600">
-                          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                        <div className="mt-1 flex items-center gap-1.5 text-base text-slate-600">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                           <span className="font-semibold text-slate-900">{d.rating.toFixed(1)}</span>
-                          <span>({d.reviewCount ?? 0} reviews)</span>
+                          <span className="text-slate-400">({d.reviewCount ?? 0})</span>
                         </div>
                       ) : null}
-                      {d.location && (
-                        <div className="mt-2 flex items-center gap-2 text-lg text-slate-500">
-                          <MapPin className="h-5 w-5" />{d.location}
-                        </div>
-                      )}
-                      <div className="mt-1 flex items-center gap-2 text-lg text-slate-500">
-                        <Clock3 className="h-5 w-5" />
-                        {d.isAvailable ? "Available now" : "Unavailable"}
-                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-2xl font-extrabold text-violet-600">${d.hourlyRate ?? "—"}</div>
+                      <div className="text-sm text-slate-400">/hr</div>
                     </div>
                   </div>
-                  <div className="flex flex-row items-end justify-between md:flex-col md:items-end">
-                    <div className="text-right">
-                      <div className="text-4xl font-extrabold text-violet-600">${d.hourlyRate ?? "—"}</div>
-                      <div className="text-lg text-slate-500">/hour</div>
-                    </div>
-                    <div className="rounded-full bg-violet-50 px-4 py-2 text-lg font-semibold text-violet-600">
+                  <div className="flex items-center justify-between text-sm text-slate-500">
+                    {d.location && (
+                      <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{d.location}</span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock3 className="h-4 w-4" />
+                      {d.isAvailable ? "Available" : "Unavailable"}
+                    </span>
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-600">
                       {d.jobCount ?? 0} jobs
-                    </div>
+                    </span>
                   </div>
                 </Link>
               );
@@ -314,18 +312,17 @@ export default function CustomerDashboardPage() {
             <h2 className="text-3xl font-bold text-slate-900">Why HandyMatch?</h2>
           </div>
 
-          <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-3">
             {benefits.map((item) => (
-              <div key={item.title} className="flex items-start gap-4">
+              <div key={item.title} className="flex flex-col items-start gap-3 rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
                 <div
                   className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-md`}
                 >
                   <Check className="h-7 w-7" />
                 </div>
-
                 <div>
-                  <h3 className="text-2xl font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-1 text-lg text-slate-600">{item.description}</p>
+                  <h3 className="text-xl font-semibold text-slate-900">{item.title}</h3>
+                  <p className="mt-1 text-base text-slate-600">{item.description}</p>
                 </div>
               </div>
             ))}

@@ -40,10 +40,10 @@ export default function ProfessionalDetailPage({ params }: Props) {
     availability?: WeeklyAvailability; serviceArea?: string;
   };
 
-  const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string }) => {
+  const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string; durationHours: number }) => {
     if (!user || !userProfile || !pro) return;
 
-    // Last-resort conflict check using the live proBookings snapshot
+    // Overlap check: new booking [newStart, newEnd) vs each existing booking
     const conflict = proBookings.some((b) => {
       if (b.status === "cancelled") return false;
       const ts = b.scheduledAt as { seconds?: number; toDate?: () => Date };
@@ -51,7 +51,12 @@ export default function ProfessionalDetailPage({ params }: Props) {
       if (typeof ts.toDate === "function") d = ts.toDate();
       else if (ts.seconds) d = new Date(ts.seconds * 1000);
       else return false;
-      return Math.abs(d.getTime() - data.scheduledAt.getTime()) < 60 * 60 * 1000;
+      const bDur = b.durationHours ?? 1;
+      const newStart = data.scheduledAt.getTime();
+      const newEnd = newStart + data.durationHours * 3_600_000;
+      const bStart = d.getTime();
+      const bEnd = bStart + bDur * 3_600_000;
+      return newStart < bEnd && newEnd > bStart;
     });
     if (conflict) throw new Error("This slot was just booked. Please pick another time.");
 
@@ -66,6 +71,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
       location: data.location,
       price: proData.hourlyRate ?? 0,
       notes: data.notes,
+      durationHours: data.durationHours,
     });
     await createNotification(
       pro.uid,
@@ -232,6 +238,50 @@ export default function ProfessionalDetailPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* Feedback Summary */}
+        {reviews.length > 0 && (() => {
+          const THEMES = [
+            { label: "Punctual",     words: ["punctual", "on time", "timely", "prompt"] },
+            { label: "Professional", words: ["professional", "expert", "skilled"] },
+            { label: "Quality work", words: ["quality", "excellent", "great work", "well done", "amazing"] },
+            { label: "Clean",        words: ["clean", "tidy", "neat"] },
+            { label: "Friendly",     words: ["friendly", "kind", "nice", "pleasant", "polite"] },
+            { label: "Fast",         words: ["fast", "quick", "efficient", "speedy"] },
+            { label: "Reliable",     words: ["reliable", "trustworthy", "honest"] },
+            { label: "Recommended",  words: ["recommend", "highly recommend", "would use again"] },
+          ];
+          const tags = THEMES
+            .map(({ label, words }) => ({
+              label,
+              count: reviews.filter((r) => words.some((w) => r.comment.toLowerCase().includes(w))).length,
+            }))
+            .filter((t) => t.count > 0)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+          if (tags.length === 0) return null;
+          const rating = proData.rating ?? 0;
+          const top = tags.slice(0, 2).map((t) => t.label.toLowerCase());
+          const summary = rating >= 4.5
+            ? `Customers love their ${top.join(" and ")}.`
+            : rating >= 3.5
+            ? `Known for being ${top.join(" and ")}.`
+            : "Mixed reviews — check details below.";
+          return (
+            <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="text-2xl font-bold text-slate-900 mb-1">What Customers Say</h3>
+              <p className="text-lg text-slate-500 mb-4">{summary}</p>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((t) => (
+                  <span key={t.label} className="flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-base font-semibold text-violet-700">
+                    {t.label}
+                    <span className="rounded-full bg-violet-200 px-2 py-0.5 text-xs font-bold text-violet-900">{t.count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Reviews */}
         {reviews.length > 0 && (

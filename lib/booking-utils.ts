@@ -14,7 +14,7 @@ export function generateSlots(start: string, end: string): string[] {
 
 export function getTakenHours(
   date: string,
-  bookings: Array<{ scheduledAt: unknown; status?: string }>
+  bookings: Array<{ scheduledAt: unknown; status?: string; durationHours?: number }>
 ): Set<string> {
   const taken = new Set<string>();
   bookings.forEach((b) => {
@@ -31,7 +31,11 @@ export function getTakenHours(
       String(d.getDate()).padStart(2, "0"),
     ].join("-");
     if (localDate === date) {
-      taken.add(`${String(d.getHours()).padStart(2, "0")}:00`);
+      const startHour = d.getHours();
+      const dur = b.durationHours ?? 1;
+      for (let i = 0; i < dur; i++) {
+        taken.add(`${String(startHour + i).padStart(2, "0")}:00`);
+      }
     }
   });
   return taken;
@@ -39,7 +43,8 @@ export function getTakenHours(
 
 export function findAsapSlot(
   availability: WeeklyAvailability | undefined,
-  existingBookings: Array<{ scheduledAt: unknown; status?: string }>
+  existingBookings: Array<{ scheduledAt: unknown; status?: string; durationHours?: number }>,
+  durationHours = 1
 ): { date: string; slot: string } | null {
   const now = new Date();
   for (let i = 0; i < 30; i++) {
@@ -62,14 +67,18 @@ export function findAsapSlot(
       slots = generateSlots(schedule.start, schedule.end);
     }
 
+    const slotSet = new Set(slots);
     const taken = getTakenHours(dateStr, existingBookings);
     const currentHour = i === 0 ? now.getHours() : -1;
 
     for (const slot of slots) {
       const [h] = slot.split(":").map(Number);
-      if (taken.has(slot)) continue;
       if (h <= currentHour) continue;
-      return { date: dateStr, slot };
+      const allFree = Array.from({ length: durationHours }, (_, k) => {
+        const sh = `${String(h + k).padStart(2, "0")}:00`;
+        return slotSet.has(sh) && !taken.has(sh);
+      }).every(Boolean);
+      if (allFree) return { date: dateStr, slot };
     }
   }
   return null;
@@ -80,4 +89,14 @@ export function formatSlot(slot: string): string {
   const period = h < 12 ? "AM" : "PM";
   const display = h % 12 === 0 ? 12 : h % 12;
   return `${display}:00 ${period}`;
+}
+
+export function formatSlotRange(slot: string, duration: number): string {
+  const [h] = slot.split(":").map(Number);
+  const fmt = (hour: number) => {
+    const p = hour < 12 ? "AM" : "PM";
+    const disp = hour % 12 === 0 ? 12 : hour % 12;
+    return `${disp}:00 ${p}`;
+  };
+  return duration === 1 ? fmt(h) : `${fmt(h)} – ${fmt(h + duration)} (${duration}h)`;
 }
