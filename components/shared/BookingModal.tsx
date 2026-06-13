@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { X, CalendarDays, MapPin, FileText, ChevronDown, Sparkles, Loader2, Clock3, Zap } from "lucide-react";
 import { WeeklyAvailability } from "@/lib/types";
-import { DAY_KEYS, generateSlots, getTakenHours, findAsapSlot, formatSlot } from "@/lib/booking-utils";
+import { DAY_KEYS, generateSlots, getTakenHours, findAsapSlot, formatSlot, formatSlotRange } from "@/lib/booking-utils";
 
 interface ClassifyResult {
   category: string;
@@ -18,8 +18,8 @@ interface Props {
   hourlyRate: number;
   customerLocation: string;
   availability?: WeeklyAvailability;
-  existingBookings?: Array<{ scheduledAt: unknown; status?: string }>;
-  onConfirm: (data: { service: string; scheduledAt: Date; location: string; notes: string }) => Promise<void>;
+  existingBookings?: Array<{ scheduledAt: unknown; status?: string; durationHours?: number }>;
+  onConfirm: (data: { service: string; scheduledAt: Date; location: string; notes: string; durationHours: number }) => Promise<void>;
   onClose: () => void;
 }
 
@@ -49,6 +49,7 @@ export default function BookingModal({
   const [error, setError] = useState("");
   const [classifying, setClassifying] = useState(false);
   const [suggestion, setSuggestion] = useState<ClassifyResult | null>(null);
+  const [duration, setDuration] = useState(1);
 
   // Clear prefill from sessionStorage once consumed
   useEffect(() => {
@@ -61,12 +62,11 @@ export default function BookingModal({
   const { slots, dayEnabled, dayLabel } = useMemo(() => {
     if (!date) return { slots: [], dayEnabled: true, dayLabel: "" };
 
-    const dayIndex = new Date(date + "T12:00:00").getDay(); // use noon to avoid DST issues
+    const dayIndex = new Date(date + "T12:00:00").getDay();
     const dayKey = DAY_KEYS[dayIndex];
     const label = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
 
     if (!availability) {
-      // No availability set — generate default 8am-6pm slots
       return { slots: generateSlots("08:00", "18:00"), dayEnabled: true, dayLabel: label };
     }
 
@@ -83,13 +83,26 @@ export default function BookingModal({
     [date, existingBookings]
   );
 
-  // If a selected slot gets booked by someone else in real-time, clear it
+  const slotSet = useMemo(() => new Set(slots), [slots]);
+
+  // A slot is selectable only if all 'duration' consecutive hours are within
+  // the day's available range AND none are taken.
+  const isSlotSelectable = (slot: string): boolean => {
+    const [h] = slot.split(":").map(Number);
+    return Array.from({ length: duration }, (_, k) => {
+      const sh = `${String(h + k).padStart(2, "0")}:00`;
+      return slotSet.has(sh) && !takenHours.has(sh);
+    }).every(Boolean);
+  };
+
+  // If a selected slot becomes unavailable in real-time, clear it
   useEffect(() => {
-    if (selectedSlot && takenHours.has(selectedSlot)) {
+    if (selectedSlot && !isSlotSelectable(selectedSlot)) {
       setSelectedSlot(null);
-      setError("This slot was just booked by someone else. Please choose another time.");
+      setError("This slot is no longer available. Please choose another time.");
     }
-  }, [takenHours, selectedSlot]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takenHours, selectedSlot, duration]);
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
@@ -113,6 +126,9 @@ export default function BookingModal({
       setSuggestion(data);
       const match = services.find((s) => s.toLowerCase() === data.category.toLowerCase());
       if (match) setService(match);
+      setDuration(Math.max(1, Math.round(data.estimatedHours)));
+      // Clear slot if it's no longer selectable with the new duration
+      setSelectedSlot(null);
     } catch {
       setError("Could not classify the job. Try again or select a service manually.");
     } finally {
@@ -131,7 +147,7 @@ export default function BookingModal({
     try {
       const [h] = selectedSlot.split(":").map(Number);
       const scheduledAt = new Date(`${date}T${String(h).padStart(2, "0")}:00:00`);
-      await onConfirm({ service, scheduledAt, location: location.trim(), notes: notes.trim() });
+      await onConfirm({ service, scheduledAt, location: location.trim(), notes: notes.trim(), durationHours: duration });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to send booking request. Please try again.");
     } finally {
@@ -182,11 +198,13 @@ export default function BookingModal({
             <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-5 py-4 space-y-1">
               <p className="text-sm font-bold text-fuchsia-700 uppercase tracking-wide">AI Suggestion</p>
               <p className="text-lg font-semibold text-slate-800">{suggestion.summary}</p>
-              <p className="text-base text-slate-600">
-                Category: <span className="font-semibold">{suggestion.category}</span>
-                {" · "}Est. {suggestion.estimatedHours}h
-                {" · "}${suggestion.priceRange.min}–${suggestion.priceRange.max}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 text-base text-slate-600">
+                <span>Category: <span className="font-semibold">{suggestion.category}</span></span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-sm font-bold text-violet-700">
+                  <Clock3 className="h-3.5 w-3.5" />{duration}h estimated
+                </span>
+                <span>${suggestion.priceRange.min}–${suggestion.priceRange.max}</span>
+              </div>
             </div>
           )}
 
@@ -216,7 +234,7 @@ export default function BookingModal({
               <button
                 type="button"
                 onClick={() => {
-                  const asap = findAsapSlot(availability, existingBookings);
+                  const asap = findAsapSlot(availability, existingBookings, duration);
                   if (asap) {
                     setDate(asap.date);
                     setSelectedSlot(asap.slot);
@@ -244,6 +262,11 @@ export default function BookingModal({
             <div>
               <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
                 <Clock3 className="inline h-4 w-4 mr-1" />Available Time Slots — {dayLabel}
+                {duration > 1 && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
+                    {duration}h blocks
+                  </span>
+                )}
               </label>
 
               {!dayEnabled ? (
@@ -255,33 +278,37 @@ export default function BookingModal({
                   No slots available for this day.
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {slots.map((slot) => {
-                    const taken = takenHours.has(slot);
-                    const selected = selectedSlot === slot;
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={taken}
-                        onClick={() => { setSelectedSlot(slot); setError(""); }}
-                        className={`rounded-2xl py-3 text-base font-semibold transition ${
-                          taken
-                            ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
-                            : selected
-                            ? "bg-violet-600 text-white shadow-md"
-                            : "bg-gray-50 text-slate-700 border border-gray-200 hover:border-violet-300 hover:bg-violet-50"
-                        }`}
-                      >
-                        {taken ? (
-                          <span>{formatSlot(slot)}</span>
-                        ) : (
-                          formatSlot(slot)
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  {selectedSlot && (
+                    <p className="mb-3 rounded-xl bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">
+                      <Clock3 className="inline h-3.5 w-3.5 mr-1" />
+                      {formatSlotRange(selectedSlot, duration)}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {slots.map((slot) => {
+                      const selectable = isSlotSelectable(slot);
+                      const selected = selectedSlot === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={!selectable}
+                          onClick={() => { setSelectedSlot(slot); setError(""); }}
+                          className={`rounded-2xl py-3 text-base font-semibold transition ${
+                            !selectable
+                              ? "bg-gray-100 text-gray-400 line-through cursor-not-allowed"
+                              : selected
+                              ? "bg-violet-600 text-white shadow-md"
+                              : "bg-gray-50 text-slate-700 border border-gray-200 hover:border-violet-300 hover:bg-violet-50"
+                          }`}
+                        >
+                          {formatSlot(slot)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -304,6 +331,11 @@ export default function BookingModal({
           <div className="rounded-2xl bg-violet-50 px-5 py-4">
             <p className="text-lg text-slate-600">
               Rate: <span className="font-bold text-slate-900">${hourlyRate}/hr</span>
+              {duration > 1 && (
+                <span className="ml-3 text-base text-slate-500">
+                  Est. total: <span className="font-bold text-slate-800">${hourlyRate * duration}</span>
+                </span>
+              )}
             </p>
           </div>
 

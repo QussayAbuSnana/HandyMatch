@@ -65,6 +65,7 @@ export interface Booking {
   location: string;
   price: number;
   notes?: string;
+  durationHours?: number;
   createdAt: Timestamp;
 }
 
