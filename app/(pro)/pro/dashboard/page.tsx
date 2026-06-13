@@ -56,7 +56,7 @@ export default function ProfessionalDashboardPage() {
   const todayJobs = bookings.filter((b) => (b.status === "accepted" || b.status === "in_progress") && isToday(b));
   const monthEarnings = bookings
     .filter((b) => b.status === "completed" && isThisMonth(b))
-    .reduce((sum, b) => sum + (b.price ?? 0), 0);
+    .reduce((sum, b) => sum + (b.price ?? 0) * (b.durationHours ?? 1), 0);
 
   const stats = [
     { title: "New Requests", value: loading ? "…" : String(pending.length),   icon: Briefcase,    gradient: "from-violet-500 to-fuchsia-500" },
