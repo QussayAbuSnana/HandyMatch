@@ -12,19 +12,21 @@ import { subscribeCustomerBookings, hasReviewed, updateBookingStatus, createNoti
 import { Booking } from "@/lib/types";
 import ReviewModal from "@/components/shared/ReviewModal";
 import CancelReasonModal from "@/components/shared/CancelReasonModal";
+import { useLanguage } from "@/lib/language-context";
 
 type Tab = "active" | "completed" | "cancelled";
 
-const STATUS_META: Record<string, { label: string; badge: string }> = {
-  pending:     { label: "Pending",     badge: "bg-yellow-100 text-yellow-700" },
-  accepted:    { label: "Accepted",    badge: "bg-blue-100 text-blue-700" },
-  in_progress: { label: "In Progress", badge: "bg-blue-100 text-blue-700" },
-  completed:   { label: "Completed",   badge: "bg-green-100 text-green-700" },
-  cancelled:   { label: "Cancelled",   badge: "bg-red-100 text-red-700" },
+const STATUS_META: Record<string, { labelKey: string; badge: string }> = {
+  pending:     { labelKey: "upcoming",    badge: "bg-yellow-100 text-yellow-700" },
+  accepted:    { labelKey: "upcoming",    badge: "bg-blue-100 text-blue-700" },
+  in_progress: { labelKey: "in_progress", badge: "bg-blue-100 text-blue-700" },
+  completed:   { labelKey: "completed",   badge: "bg-green-100 text-green-700" },
+  cancelled:   { labelKey: "cancelled",   badge: "bg-red-100 text-red-700" },
 };
 
 export default function BookingsPage() {
   const { user, userProfile } = useAuth();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,10 +87,10 @@ export default function BookingsPage() {
 
   const shown = tab === "active" ? active : tab === "completed" ? completed : cancelled;
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "active",    label: "Active",    count: active.length },
-    { key: "completed", label: "Completed", count: completed.length },
-    { key: "cancelled", label: "Cancelled", count: cancelled.length },
+  const tabs: { key: Tab; labelKey: string; count: number }[] = [
+    { key: "active",    labelKey: "active",    count: active.length },
+    { key: "completed", labelKey: "completed", count: completed.length },
+    { key: "cancelled", labelKey: "cancelled", count: cancelled.length },
   ];
 
   return (
@@ -98,27 +100,27 @@ export default function BookingsPage() {
           <Link href="/profile" className="text-gray-600 hover:text-gray-900 transition">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">My Bookings</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("my_bookings")}</h1>
         </div>
 
         {/* Tabs */}
         <div className="mx-auto flex max-w-7xl gap-1 px-5 pb-4">
-          {tabs.map((t) => (
+          {tabs.map((tb) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tb.key}
+              onClick={() => setTab(tb.key)}
               className={`flex items-center gap-2 rounded-2xl px-5 py-2.5 text-base font-semibold transition ${
-                tab === t.key
+                tab === tb.key
                   ? "bg-violet-600 text-white shadow-sm"
                   : "bg-gray-100 text-slate-600 hover:bg-gray-200"
               }`}
             >
-              {t.label}
-              {t.count > 0 && (
+              {t(tb.labelKey)}
+              {tb.count > 0 && (
                 <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                  tab === t.key ? "bg-white/25 text-white" : "bg-white text-slate-600"
+                  tab === tb.key ? "bg-white/25 text-white" : "bg-white text-slate-600"
                 }`}>
-                  {t.count}
+                  {tb.count}
                 </span>
               )}
             </button>
@@ -135,11 +137,11 @@ export default function BookingsPage() {
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Clock3 className="mx-auto h-16 w-16 text-slate-300 mb-4" />
             <p className="text-2xl font-semibold text-slate-500">
-              {tab === "active" ? "No active bookings." : tab === "completed" ? "No completed bookings yet." : "No cancelled bookings."}
+              {tab === "active" ? t("no_active_bookings") : tab === "completed" ? t("no_completed_bookings") : t("no_cancelled_bookings")}
             </p>
             {tab === "active" && (
               <Link href="/search" className="mt-6 inline-block rounded-2xl bg-violet-600 px-8 py-4 text-xl font-bold text-white hover:bg-violet-700 transition">
-                Find Professionals
+                {t("find_professionals")}
               </Link>
             )}
           </div>
@@ -188,7 +190,7 @@ export default function BookingsPage() {
                     {/* Right */}
                     <div className="flex flex-col items-start gap-2 md:items-end shrink-0">
                       <span className={`rounded-xl px-4 py-2 text-base font-semibold ${meta.badge}`}>
-                        {meta.label}
+                        {t(meta.labelKey)}
                       </span>
 
                       {canReview && (
@@ -196,12 +198,12 @@ export default function BookingsPage() {
                           onClick={() => setActiveReview(b)}
                           className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-base font-semibold text-white hover:bg-amber-600 transition"
                         >
-                          <Star className="h-4 w-4" /> Leave Review
+                          <Star className="h-4 w-4" /> {t("leave_review")}
                         </button>
                       )}
                       {b.status === "completed" && reviewed[b.id] === true && (
                         <span className="flex items-center gap-2 text-base font-medium text-green-600">
-                          <CheckCircle2 className="h-4 w-4" /> Reviewed
+                          <CheckCircle2 className="h-4 w-4" /> {t("reviewed")}
                         </span>
                       )}
                       {canCancel && (
@@ -209,7 +211,7 @@ export default function BookingsPage() {
                           onClick={() => setCancelTarget(b)}
                           className="flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-base font-semibold text-red-600 hover:bg-red-50 transition"
                         >
-                          <Ban className="h-4 w-4" /> Cancel
+                          <Ban className="h-4 w-4" /> {t("cancel")}
                         </button>
                       )}
                       {b.status === "cancelled" && (

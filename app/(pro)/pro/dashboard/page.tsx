@@ -11,6 +11,8 @@ import {
 import { subscribeProBookings } from "@/lib/firestore";
 import ProSideMenu from "@/components/shared/ProSideMenu";
 import { Booking } from "@/lib/types";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
+import { useLanguage } from "@/lib/language-context";
 
 function isToday(b: Booking): boolean {
   if (!b.scheduledAt) return false;
@@ -36,6 +38,7 @@ function formatDate(b: Booking): string {
 
 export default function ProfessionalDashboardPage() {
   const { user, userProfile } = useAuth();
+  const { t } = useLanguage();
   const firstName = userProfile?.displayName?.split(" ")[0] ?? "there";
   const proData = userProfile as unknown as { rating?: number; reviewCount?: number };
 
@@ -59,10 +62,16 @@ export default function ProfessionalDashboardPage() {
     .reduce((sum, b) => sum + (b.price ?? 0) * (b.durationHours ?? 1), 0);
 
   const stats = [
-    { title: "New Requests", value: loading ? "…" : String(pending.length),   icon: Briefcase,    gradient: "from-violet-500 to-fuchsia-500" },
-    { title: "Today's Jobs", value: loading ? "…" : String(todayJobs.length), icon: CalendarDays, gradient: "from-blue-500 to-cyan-500" },
-    { title: "Rating",       value: proData?.rating ? proData.rating.toFixed(1) : "New", icon: Star, gradient: "from-amber-400 to-orange-500" },
-    { title: "This Month",   value: loading ? "…" : `$${monthEarnings}`,      icon: Wallet,       gradient: "from-emerald-500 to-green-600" },
+    { titleKey: "new_requests",  value: loading ? "…" : String(pending.length),   icon: Briefcase,    gradient: "from-violet-500 to-fuchsia-500" },
+    { titleKey: "todays_jobs",   value: loading ? "…" : String(todayJobs.length), icon: CalendarDays, gradient: "from-blue-500 to-cyan-500" },
+    { titleKey: "rating",        value: proData?.rating ? proData.rating.toFixed(1) : "New", icon: Star, gradient: "from-amber-400 to-orange-500" },
+    { titleKey: "this_month",    value: loading ? "…" : `$${monthEarnings}`,      icon: Wallet,       gradient: "from-emerald-500 to-green-600" },
+  ];
+
+  const quickLinks = [
+    { href: "/pro/jobs",     icon: Briefcase,    bg: "bg-violet-100 text-violet-600",   titleKey: "view_requests",  descKey: "respond_quickly" },
+    { href: "/pro/messages", icon: MessageSquare,bg: "bg-blue-100 text-blue-600",       titleKey: "open_messages",  descKey: "keep_profile_desc" },
+    { href: "/pro/profile",  icon: User,         bg: "bg-emerald-100 text-emerald-600", titleKey: "update_profile", descKey: "keep_profile_desc" },
   ];
 
   return (
@@ -93,20 +102,23 @@ export default function ProfessionalDashboardPage() {
       {/* Hero + stats */}
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-6 text-white">
         <div className="mx-auto max-w-7xl">
-          <p className="mb-3 text-xl font-medium text-white/90">Welcome back, {firstName}!</p>
-          <h1 className="mb-3 text-4xl font-extrabold md:text-6xl">Manage Your Workday</h1>
-          <p className="text-lg text-white/85 md:text-2xl">Track requests, jobs, earnings, and client communication</p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-xl font-medium text-white/90">{t("welcome_back")}, {firstName}!</p>
+            <LanguageSwitcher compact />
+          </div>
+          <h1 className="mb-3 text-4xl font-extrabold md:text-6xl">{t("manage_workday")}</h1>
+          <p className="text-lg text-white/85 md:text-2xl">{t("manage_workday_sub")}</p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-4">
             {stats.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="rounded-[2rem] border border-white/20 bg-white/10 px-6 py-6 shadow-lg backdrop-blur-sm">
+                <div key={item.titleKey} className="rounded-[2rem] border border-white/20 bg-white/10 px-6 py-6 shadow-lg backdrop-blur-sm">
                   <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-md`}>
                     <Icon className="h-7 w-7" />
                   </div>
                   <div className="text-3xl font-extrabold">{item.value}</div>
-                  <div className="mt-2 text-lg text-white/85">{item.title}</div>
+                  <div className="mt-2 text-lg text-white/85">{t(item.titleKey)}</div>
                 </div>
               );
             })}
@@ -117,17 +129,13 @@ export default function ProfessionalDashboardPage() {
       {/* Quick links */}
       <section className="mx-auto -mt-6 max-w-7xl px-5">
         <div className="grid gap-5 md:grid-cols-3">
-          {[
-            { href: "/pro/jobs",     icon: Briefcase,    bg: "bg-violet-100 text-violet-600",  title: "View Requests",  desc: "Review incoming customer requests and respond quickly." },
-            { href: "/pro/messages", icon: MessageSquare,bg: "bg-blue-100 text-blue-600",      title: "Open Messages",  desc: "Stay connected with customers and manage conversations." },
-            { href: "/pro/profile",  icon: User,         bg: "bg-emerald-100 text-emerald-600",title: "Update Profile",  desc: "Edit your services, pricing, and availability information." },
-          ].map(({ href, icon: Icon, bg, title, desc }) => (
+          {quickLinks.map(({ href, icon: Icon, bg, titleKey, descKey }) => (
             <Link key={href} href={href} className="rounded-[2rem] border border-gray-200 bg-white px-6 py-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
               <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${bg}`}>
                 <Icon className="h-7 w-7" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900">{title}</h3>
-              <p className="mt-2 text-lg text-slate-500">{desc}</p>
+              <h3 className="text-2xl font-bold text-slate-900">{t(titleKey)}</h3>
+              <p className="mt-2 text-lg text-slate-500">{t(descKey)}</p>
             </Link>
           ))}
         </div>
@@ -136,8 +144,8 @@ export default function ProfessionalDashboardPage() {
       {/* New Requests (live) */}
       <section className="mx-auto mt-8 max-w-7xl px-5">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-slate-900">New Requests</h2>
-          <Link href="/pro/jobs" className="text-xl font-semibold text-violet-600">See all</Link>
+          <h2 className="text-3xl font-bold text-slate-900">{t("new_requests")}</h2>
+          <Link href="/pro/jobs" className="text-xl font-semibold text-violet-600">{t("see_all")}</Link>
         </div>
         {loading ? (
           <div className="flex justify-center py-8">
@@ -145,7 +153,7 @@ export default function ProfessionalDashboardPage() {
           </div>
         ) : pending.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-8 text-center text-xl text-slate-400 shadow-sm">
-            No pending requests right now.
+            {t("no_pending_dash")}
           </div>
         ) : (
           <div className="space-y-4">
@@ -165,7 +173,7 @@ export default function ProfessionalDashboardPage() {
                       <DollarSign className="h-6 w-6" />{req.price}/hr
                     </span>
                     <Link href="/pro/jobs" className="rounded-xl bg-violet-600 px-5 py-2 text-lg font-semibold text-white transition hover:bg-violet-700">
-                      Respond →
+                      {t("respond")}
                     </Link>
                   </div>
                 </div>
@@ -178,12 +186,12 @@ export default function ProfessionalDashboardPage() {
       {/* Today's Jobs (live) */}
       <section className="mx-auto mt-8 max-w-7xl px-5">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-slate-900">Today&apos;s Jobs</h2>
-          <Link href="/pro/jobs" className="text-xl font-semibold text-violet-600">View schedule</Link>
+          <h2 className="text-3xl font-bold text-slate-900">{t("todays_jobs")}</h2>
+          <Link href="/pro/jobs" className="text-xl font-semibold text-violet-600">{t("view_requests")}</Link>
         </div>
         {loading ? null : todayJobs.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-8 text-center text-xl text-slate-400 shadow-sm">
-            No jobs scheduled for today.
+            {t("no_todays_jobs")}
           </div>
         ) : (
           <div className="space-y-4">
@@ -198,7 +206,7 @@ export default function ProfessionalDashboardPage() {
                     </div>
                   </div>
                   <span className={`rounded-full px-4 py-2 text-lg font-semibold ${job.status === "in_progress" ? "bg-blue-100 text-blue-700" : "bg-violet-100 text-violet-700"}`}>
-                    {job.status === "in_progress" ? "In Progress" : "Upcoming"}
+                    {job.status === "in_progress" ? t("in_progress") : t("upcoming")}
                   </span>
                 </div>
               </div>
@@ -215,10 +223,10 @@ export default function ProfessionalDashboardPage() {
               <CheckCircle2 className="h-7 w-7" />
             </div>
             <div className="flex-1">
-              <h2 className="text-3xl font-bold text-slate-900">Keep your profile updated</h2>
-              <p className="mt-3 text-xl text-slate-600">Customers are more likely to book you when your services and availability are current.</p>
+              <h2 className="text-3xl font-bold text-slate-900">{t("keep_profile_updated")}</h2>
+              <p className="mt-3 text-xl text-slate-600">{t("keep_profile_desc")}</p>
               <Link href="/pro/profile" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-lg font-semibold text-white transition hover:bg-green-700">
-                Edit profile <ArrowRight className="h-5 w-5" />
+                {t("edit_profile")} <ArrowRight className="h-5 w-5" />
               </Link>
             </div>
           </div>
@@ -228,16 +236,16 @@ export default function ProfessionalDashboardPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/pro/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">Dashboard</span>
+            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("dashboard")}</span>
           </Link>
           <Link href="/pro/jobs" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">Jobs</span>
+            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("jobs")}</span>
           </Link>
           <Link href="/pro/messages" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">Messages</span>
+            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("messages")}</span>
           </Link>
           <Link href="/pro/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>
