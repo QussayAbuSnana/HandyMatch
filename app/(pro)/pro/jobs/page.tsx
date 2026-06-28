@@ -9,9 +9,11 @@ import { useAuth } from "@/lib/auth-context";
 import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
 import ReviewModal from "@/components/shared/ReviewModal";
+import { useLanguage } from "@/lib/language-context";
 
 export default function ProJobsPage() {
   const { user, userProfile } = useAuth();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ export default function ProJobsPage() {
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900"><Menu className="h-8 w-8" /></button>
-          <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("jobs")}</h1>
           <Link href="/pro/notifications" className="relative text-gray-600 transition hover:text-gray-900">
             <Bell className="h-8 w-8" />
             {pending.length > 0 && (
@@ -104,8 +106,8 @@ export default function ProJobsPage() {
 
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-8 pt-6 text-white">
         <div className="mx-auto max-w-7xl">
-          <h2 className="text-4xl font-extrabold">Manage Requests & Jobs</h2>
-          <p className="mt-3 text-lg text-white/85">Review incoming work, track active jobs, and keep your workflow organized.</p>
+          <h2 className="text-4xl font-extrabold">{t("manage_jobs")}</h2>
+          <p className="mt-3 text-lg text-white/85">{t("manage_jobs_sub")}</p>
         </div>
       </section>
 
@@ -122,13 +124,13 @@ export default function ProJobsPage() {
                 <Briefcase className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-slate-900">New Requests</h2>
-                <p className="text-lg text-slate-500">Respond quickly to increase your chances of getting hired.</p>
+                <h2 className="text-3xl font-bold text-slate-900">{t("pending_requests")}</h2>
+                <p className="text-lg text-slate-500">{t("respond_quickly")}</p>
               </div>
             </div>
 
             {pending.length === 0 ? (
-              <p className="text-xl text-slate-400 text-center py-8">No pending requests.</p>
+              <p className="text-xl text-slate-400 text-center py-8">{t("no_pending")}</p>
             ) : (
               <div className="space-y-4">
                 {pending.map((req) => {
@@ -162,10 +164,10 @@ export default function ProJobsPage() {
                         </div>
                         <div className="flex gap-3">
                           <button onClick={() => handleDecline(req)} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-lg font-semibold text-slate-700 transition hover:bg-gray-50">
-                            <XCircle className="h-5 w-5" />Decline
+                            <XCircle className="h-5 w-5" />{t("decline")}
                           </button>
                           <button onClick={() => handleAccept(req)} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-lg font-semibold text-white transition hover:bg-green-700">
-                            <CheckCircle2 className="h-5 w-5" />Accept
+                            <CheckCircle2 className="h-5 w-5" />{t("accept")}
                           </button>
                         </div>
                       </div>
@@ -184,13 +186,13 @@ export default function ProJobsPage() {
                 <CalendarDays className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-slate-900">Accepted Jobs</h2>
-                <p className="text-lg text-slate-500">Jobs you have confirmed and scheduled.</p>
+                <h2 className="text-3xl font-bold text-slate-900">{t("accepted_jobs")}</h2>
+                <p className="text-lg text-slate-500">{t("jobs_confirmed")}</p>
               </div>
             </div>
 
             {accepted.length === 0 ? (
-              <p className="text-xl text-slate-400 text-center py-8">No active jobs.</p>
+              <p className="text-xl text-slate-400 text-center py-8">{t("no_active")}</p>
             ) : (
               <div className="space-y-4">
                 {accepted.map((job) => (
@@ -211,10 +213,10 @@ export default function ProJobsPage() {
                         <div className="text-3xl font-extrabold text-violet-600">${job.price}/hr</div>
                         <div className="flex gap-3">
                           <span className={`rounded-full px-4 py-2 text-lg font-semibold ${job.status === "in_progress" ? "bg-blue-100 text-blue-700" : "bg-violet-100 text-violet-700"}`}>
-                            {job.status === "in_progress" ? "In Progress" : "Upcoming"}
+                            {job.status === "in_progress" ? t("in_progress") : t("upcoming")}
                           </span>
                           <button onClick={() => handleComplete(job)} className="rounded-xl bg-emerald-600 px-4 py-2 text-lg font-semibold text-white transition hover:bg-emerald-700">
-                            Mark Complete
+                            {t("mark_complete")}
                           </button>
                         </div>
                       </div>
@@ -232,13 +234,13 @@ export default function ProJobsPage() {
                 <Wrench className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-slate-900">Completed Jobs</h2>
-                <p className="text-lg text-slate-500">Recently finished work.</p>
+                <h2 className="text-3xl font-bold text-slate-900">{t("completed_jobs")}</h2>
+                <p className="text-lg text-slate-500">{t("recently_finished")}</p>
               </div>
             </div>
 
             {completed.length === 0 ? (
-              <p className="text-xl text-slate-400 text-center py-8">No completed jobs yet.</p>
+              <p className="text-xl text-slate-400 text-center py-8">{t("no_completed")}</p>
             ) : (
               <div className="space-y-4">
                 {completed.map((job) => (
@@ -257,18 +259,18 @@ export default function ProJobsPage() {
                       </div>
                       <div className="flex flex-col items-start gap-3 md:items-end">
                         <div className="text-3xl font-extrabold text-emerald-600">${job.price}/hr</div>
-                        <span className="rounded-full bg-emerald-100 px-4 py-2 text-lg font-semibold text-emerald-700">Completed</span>
+                        <span className="rounded-full bg-emerald-100 px-4 py-2 text-lg font-semibold text-emerald-700">{t("completed")}</span>
                         {reviewed[job.id] === false && (
                           <button
                             onClick={() => setActiveReview(job)}
                             className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-lg font-semibold text-white hover:bg-amber-600 transition"
                           >
-                            <Star className="h-5 w-5" /> Review Customer
+                            <Star className="h-5 w-5" /> {t("review_customer")}
                           </button>
                         )}
                         {reviewed[job.id] === true && (
                           <span className="flex items-center gap-2 text-lg font-medium text-green-600">
-                            <CheckCircle2 className="h-5 w-5" /> Reviewed
+                            <CheckCircle2 className="h-5 w-5" /> {t("reviewed")}
                           </span>
                         )}
                       </div>
@@ -300,16 +302,16 @@ export default function ProJobsPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/pro/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">Dashboard</span>
+            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("dashboard")}</span>
           </Link>
           <Link href="/pro/jobs" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">Jobs</span>
+            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("jobs")}</span>
           </Link>
           <Link href="/pro/messages" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">Messages</span>
+            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("messages")}</span>
           </Link>
           <Link href="/pro/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>

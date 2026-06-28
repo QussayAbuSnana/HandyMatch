@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { subscribeNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firestore";
 import { Notification } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
 function getCustomerAction(n: Notification): { href: string; label: string } | null {
   switch (n.type) {
@@ -42,6 +43,7 @@ function timeAgo(n: Notification): string {
 
 export default function CustomerNotificationsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ export default function CustomerNotificationsPage() {
           <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("notifications")}</h1>
           {unreadCount > 0 ? (
             <button
               onClick={handleMarkAll}
@@ -86,7 +88,7 @@ export default function CustomerNotificationsPage() {
               className="flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition disabled:opacity-60"
             >
               <CheckCheck className="h-4 w-4" />
-              {markingAll ? "…" : "All read"}
+              {markingAll ? "…" : t("mark_all_read")}
             </button>
           ) : (
             <div className="w-24" />
@@ -102,8 +104,8 @@ export default function CustomerNotificationsPage() {
         ) : notifications.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Bell className="mx-auto h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-2xl font-semibold text-slate-500">No notifications yet.</p>
-            <p className="mt-2 text-lg text-slate-400">Updates about your bookings will appear here.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_notifications")}</p>
+            <p className="mt-2 text-lg text-slate-400">{t("no_notifications_sub")}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -152,16 +154,16 @@ export default function CustomerNotificationsPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">Home</span>
+            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("home")}</span>
           </Link>
           <Link href="/search" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">Search</span>
+            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("search")}</span>
           </Link>
           <Link href="/notifications" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <Bell className="h-7 w-7" /><span className="mt-1 text-base font-medium">Alerts</span>
+            <Bell className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("alerts")}</span>
           </Link>
           <Link href="/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>
