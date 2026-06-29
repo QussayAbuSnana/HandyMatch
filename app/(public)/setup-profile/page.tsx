@@ -51,8 +51,13 @@ export default function SetupProfilePage() {
         await refreshProfile();
       }
       router.push("/select-role");
-    } catch {
-      setError("Upload failed. Please try again.");
+    } catch (err: unknown) {
+      const msg = (err as { code?: string })?.code ?? "";
+      if (msg.includes("unauthorized") || msg.includes("permission")) {
+        setError("Storage permission denied. Ask your admin to update Firebase Storage rules.");
+      } else {
+        setError("Upload failed. Please try again.");
+      }
     } finally {
       setUploading(false);
     }
