@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { subscribeConversations, subscribeCustomerBookings } from "@/lib/firestore";
 import { BellButton } from "@/components/shared/CustomerNavBar";
 import SideMenu from "@/components/shared/SideMenu";
+import { useLanguage } from "@/lib/language-context";
 import { Conversation, Booking } from "@/lib/types";
 
 function timeAgo(ts: unknown): string {
@@ -21,6 +22,7 @@ function timeAgo(ts: unknown): string {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,16 +40,16 @@ export default function MessagesPage() {
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <button onClick={() => setMenuOpen(true)} className="text-gray-600"><Menu className="h-8 w-8" /></button>
-          <h1 className="text-3xl font-bold text-slate-900">Messages</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("messages")}</h1>
           <BellButton />
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-5 pt-8">
-        <h2 className="mb-6 text-3xl font-bold text-slate-900">Messages</h2>
+        <h2 className="mb-6 text-3xl font-bold text-slate-900">{t("messages")}</h2>
 
         {conversations.length === 0 ? (
-          <p className="text-center text-xl text-slate-400 py-8">No conversations yet. Book a professional to start chatting!</p>
+          <p className="text-center text-xl text-slate-400 py-8">{t("no_conversations")}</p>
         ) : (
           <div className="space-y-4">
             {conversations.map((conv) => {
@@ -76,10 +78,10 @@ export default function MessagesPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pt-10">
-        <h2 className="mb-6 text-3xl font-bold text-slate-900">My Bookings</h2>
+        <h2 className="mb-6 text-3xl font-bold text-slate-900">{t("my_bookings")}</h2>
 
         {bookings.length === 0 ? (
-          <p className="text-center text-xl text-slate-400 py-8">No bookings yet.</p>
+          <p className="text-center text-xl text-slate-400 py-8">{t("no_bookings_yet")}</p>
         ) : (
           <div className="space-y-4">
             {bookings.map((b) => {
@@ -113,16 +115,16 @@ export default function MessagesPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">Home</span>
+            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("home")}</span>
           </Link>
           <Link href="/search" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">Search</span>
+            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("search")}</span>
           </Link>
           <Link href="/messages" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">Messages</span>
+            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("messages")}</span>
           </Link>
           <Link href="/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>

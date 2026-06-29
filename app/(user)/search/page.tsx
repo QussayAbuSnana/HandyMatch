@@ -12,6 +12,7 @@ import { UserProfile } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import SideMenu from "@/components/shared/SideMenu";
 import { BellButton } from "@/components/shared/CustomerNavBar";
+import { useLanguage } from "@/lib/language-context";
 
 // ── Matching algorithm ────────────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ function matchColor(pct: number): string {
 
 export default function SearchPage() {
   const { user, userProfile } = useAuth();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [menuOpen, setMenuOpen] = useState(false);
   const [professionals, setProfessionals] = useState<UserProfile[]>([]);
@@ -137,7 +139,7 @@ export default function SearchPage() {
           <button onClick={() => setMenuOpen(true)} className="text-gray-600 transition hover:text-gray-900">
             <Menu className="h-8 w-8" />
           </button>
-          <h1 className="text-3xl font-bold text-slate-900">Find Providers</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("find_providers")}</h1>
           <BellButton />
         </div>
       </header>
@@ -148,7 +150,7 @@ export default function SearchPage() {
           <Search className="mr-3 h-6 w-6 shrink-0 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by service, name or location…"
+            placeholder={t("search_by_service")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full bg-transparent text-lg text-slate-700 placeholder:text-gray-400 outline-none"
@@ -168,10 +170,10 @@ export default function SearchPage() {
       <section className="mx-auto max-w-7xl px-5 pt-8">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-slate-900">
-            {loading ? "Loading…" : `${results.length} Provider${results.length !== 1 ? "s" : ""} Found`}
+            {loading ? "…" : `${results.length} ${t("find_providers")}`}
           </h2>
           {!loading && results.length > 0 && query && (
-            <span className="text-base text-slate-400">Sorted by best match</span>
+            <span className="text-base text-slate-400">{t("sorted_best_match")}</span>
           )}
         </div>
 
@@ -183,9 +185,9 @@ export default function SearchPage() {
 
         {!loading && results.length === 0 && (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
-            <p className="text-2xl font-semibold text-slate-500">No professionals found.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_professionals_found")}</p>
             <p className="mt-2 text-lg text-slate-400">
-              {professionals.length === 0 ? "No professionals have registered yet." : "Try a different search term."}
+              {professionals.length === 0 ? t("no_professionals_found") : t("try_different_search")}
             </p>
           </div>
         )}
@@ -221,7 +223,7 @@ export default function SearchPage() {
                       <h3 className="text-2xl font-bold text-slate-900">{pro.displayName}</h3>
                       {isTopMatch && (
                         <span className="flex items-center gap-1 rounded-full bg-violet-600 px-3 py-0.5 text-xs font-bold text-white">
-                          <Zap className="h-3 w-3" /> Top Match
+                          <Zap className="h-3 w-3" /> {t("top_match")}
                         </span>
                       )}
                     </div>
@@ -245,7 +247,7 @@ export default function SearchPage() {
                       )}
                       <span className="flex items-center gap-1">
                         <Clock3 className="h-4 w-4" />
-                        {p.isAvailable ? "Available now" : "Unavailable"}
+                        {p.isAvailable ? t("available_now") : t("unavailable")}
                       </span>
                     </div>
                   </div>
@@ -280,16 +282,16 @@ export default function SearchPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">Home</span>
+            <Home className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("home")}</span>
           </Link>
           <Link href="/search" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">Search</span>
+            <Search className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("search")}</span>
           </Link>
           <Link href="/messages" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">Messages</span>
+            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("messages")}</span>
           </Link>
           <Link href="/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>

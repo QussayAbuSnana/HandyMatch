@@ -135,6 +135,44 @@ export const translations: Record<Locale, Record<string, string>> = {
     why_cancelling: "Why are you cancelling?",
     cancel_booking: "Cancel Booking",
     what_customers_say: "What Customers Say",
+
+    // Search page
+    find_providers: "Find Providers",
+    search_by_service: "Search by service, name or location…",
+    no_professionals_found: "No professionals found.",
+    try_different_search: "Try a different search term.",
+    sorted_best_match: "Sorted by best match",
+    top_match: "Top Match",
+
+    // Profile page
+    contact_info: "Contact Information",
+    email: "Email",
+    phone: "Phone",
+    location: "Location",
+    not_set: "Not set",
+    member_since: "Member since",
+    jobs_posted: "Jobs Posted",
+    log_out: "Log Out",
+    booking_history: "Booking History",
+    my_reviews: "My Reviews",
+    favorite_providers: "Favorite Providers",
+    settings: "Settings",
+    edit: "Edit",
+
+    // Messages
+    no_messages: "No messages yet.",
+    customers_appear_here: "Customers will appear here once they contact you.",
+    customer_conversations: "Customer Conversations",
+    no_conversations: "No conversations yet. Book a professional to start chatting!",
+    no_bookings_yet: "No bookings yet.",
+
+    // Pro notifications
+    stay_updated: "Stay Updated",
+    stay_updated_desc: "Important activity appears here so you can respond faster and keep customers informed.",
+    professional_activity: "Professional activity center",
+    no_notifications_pro: "Activity from bookings, messages, and reviews will show here.",
+    unread: "unread",
+    mark_all_read_btn: "Mark all read",
   },
 
   he: {
@@ -270,6 +308,44 @@ export const translations: Record<Locale, Record<string, string>> = {
     why_cancelling: "מדוע אתה מבטל?",
     cancel_booking: "ביטול הזמנה",
     what_customers_say: "מה אומרים הלקוחות",
+
+    // Search page
+    find_providers: "מצא נותני שירות",
+    search_by_service: "חפש לפי שירות, שם או מיקום…",
+    no_professionals_found: "לא נמצאו מקצוענים.",
+    try_different_search: "נסה מונח חיפוש אחר.",
+    sorted_best_match: "ממוין לפי ההתאמה הטובה ביותר",
+    top_match: "ההתאמה הטובה ביותר",
+
+    // Profile page
+    contact_info: "פרטי יצירת קשר",
+    email: "דואר אלקטרוני",
+    phone: "טלפון",
+    location: "מיקום",
+    not_set: "לא הוגדר",
+    member_since: "חבר מאז",
+    jobs_posted: "עבודות שפורסמו",
+    log_out: "התנתקות",
+    booking_history: "היסטוריית הזמנות",
+    my_reviews: "הביקורות שלי",
+    favorite_providers: "ספקים מועדפים",
+    settings: "הגדרות",
+    edit: "ערוך",
+
+    // Messages
+    no_messages: "אין הודעות עדיין.",
+    customers_appear_here: "לקוחות יופיעו כאן ברגע שייצרו איתך קשר.",
+    customer_conversations: "שיחות עם לקוחות",
+    no_conversations: "אין שיחות עדיין. הזמן מקצוען כדי להתחיל לשוחח!",
+    no_bookings_yet: "אין הזמנות עדיין.",
+
+    // Pro notifications
+    stay_updated: "הישאר מעודכן",
+    stay_updated_desc: "פעילות חשובה מופיעה כאן כדי שתוכל להגיב מהר יותר.",
+    professional_activity: "מרכז פעילות מקצועי",
+    no_notifications_pro: "פעילות מהזמנות, הודעות וביקורות תופיע כאן.",
+    unread: "לא נקראו",
+    mark_all_read_btn: "סמן הכל כנקרא",
   },
 
   ar: {
@@ -405,5 +481,43 @@ export const translations: Record<Locale, Record<string, string>> = {
     why_cancelling: "لماذا تلغي؟",
     cancel_booking: "إلغاء الحجز",
     what_customers_say: "ماذا يقول العملاء",
+
+    // Search page
+    find_providers: "ابحث عن مقدمي خدمات",
+    search_by_service: "ابحث بالخدمة أو الاسم أو الموقع…",
+    no_professionals_found: "لم يتم العثور على محترفين.",
+    try_different_search: "جرب مصطلح بحث مختلف.",
+    sorted_best_match: "مرتب حسب أفضل تطابق",
+    top_match: "الأفضل تطابقًا",
+
+    // Profile page
+    contact_info: "معلومات الاتصال",
+    email: "البريد الإلكتروني",
+    phone: "الهاتف",
+    location: "الموقع",
+    not_set: "غير محدد",
+    member_since: "عضو منذ",
+    jobs_posted: "الوظائف المنشورة",
+    log_out: "تسجيل الخروج",
+    booking_history: "سجل الحجوزات",
+    my_reviews: "تقييماتي",
+    favorite_providers: "مقدمو الخدمات المفضلون",
+    settings: "الإعدادات",
+    edit: "تعديل",
+
+    // Messages
+    no_messages: "لا توجد رسائل بعد.",
+    customers_appear_here: "سيظهر العملاء هنا بمجرد تواصلهم معك.",
+    customer_conversations: "محادثات العملاء",
+    no_conversations: "لا توجد محادثات بعد. احجز محترفًا لبدء الدردشة!",
+    no_bookings_yet: "لا توجد حجوزات بعد.",
+
+    // Pro notifications
+    stay_updated: "ابق على اطلاع",
+    stay_updated_desc: "تظهر هنا الأنشطة المهمة حتى تتمكن من الرد بشكل أسرع.",
+    professional_activity: "مركز النشاط المهني",
+    no_notifications_pro: "ستظهر هنا أنشطة الحجوزات والرسائل والتقييمات.",
+    unread: "غير مقروء",
+    mark_all_read_btn: "تحديد الكل كمقروء",
   },
 };
