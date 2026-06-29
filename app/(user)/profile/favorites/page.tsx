@@ -6,8 +6,8 @@ import { ArrowLeft, Heart, Star, MapPin, Clock3 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getProfessionals } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
-// Favorites are stored in localStorage for now (no backend collection yet)
 const STORAGE_KEY = "hm_favorites";
 
 function getFavoriteIds(): string[] {
@@ -27,6 +27,7 @@ export function isFavorite(uid: string): boolean {
 
 export default function FavoritesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [pros, setPros] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +56,7 @@ export default function FavoritesPage() {
           <Link href="/profile" className="text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Favorite Providers</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("favorite_providers")}</h1>
         </div>
       </header>
 
@@ -67,10 +68,10 @@ export default function FavoritesPage() {
         ) : pros.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Heart className="mx-auto h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-2xl font-semibold text-slate-500">No favorites yet.</p>
-            <p className="mt-2 text-lg text-slate-400">Tap the heart on a professional&apos;s profile to save them here.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_favorites_yet")}</p>
+            <p className="mt-2 text-lg text-slate-400">{t("no_favorites_desc")}</p>
             <Link href="/search" className="mt-6 inline-block rounded-2xl bg-violet-600 px-8 py-4 text-xl font-bold text-white hover:bg-violet-700 transition">
-              Browse Professionals
+              {t("browse_professionals")}
             </Link>
           </div>
         ) : (
@@ -96,19 +97,12 @@ export default function FavoritesPage() {
                               {d.rating.toFixed(1)} ({d.reviewCount ?? 0})
                             </span>
                           ) : null}
-                          {d.location && (
-                            <span className="flex items-center gap-1"><MapPin className="h-5 w-5" />{d.location}</span>
-                          )}
-                          {d.hourlyRate && (
-                            <span className="flex items-center gap-1"><Clock3 className="h-5 w-5" />${d.hourlyRate}/hr</span>
-                          )}
+                          {d.location && <span className="flex items-center gap-1"><MapPin className="h-5 w-5" />{d.location}</span>}
+                          {d.hourlyRate && <span className="flex items-center gap-1"><Clock3 className="h-5 w-5" />${d.hourlyRate}{t("hr")}</span>}
                         </div>
                       </div>
                     </Link>
-                    <button
-                      onClick={() => handleUnfavorite(pro.uid)}
-                      className="text-red-400 hover:text-red-600 transition mt-1"
-                    >
+                    <button onClick={() => handleUnfavorite(pro.uid)} className="text-red-400 hover:text-red-600 transition mt-1">
                       <Heart className="h-7 w-7 fill-red-400" />
                     </button>
                   </div>

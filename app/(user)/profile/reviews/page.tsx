@@ -7,20 +7,18 @@ import { useAuth } from "@/lib/auth-context";
 import { getDocs, query, collection, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Review } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
 async function getMyReviews(reviewerId: string): Promise<Review[]> {
-  const q = query(
-    collection(db, "reviews"),
-    where("reviewerId", "==", reviewerId)
-  );
+  const q = query(collection(db, "reviews"), where("reviewerId", "==", reviewerId));
   const snap = await getDocs(q);
-  const reviews = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review));
-  // Sort client-side to avoid needing a composite Firestore index
-  return reviews.sort((a, b) => {
-    const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
-    const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
-    return bS - aS;
-  });
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Review))
+    .sort((a, b) => {
+      const aS = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+      const bS = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0;
+      return bS - aS;
+    });
 }
 
 function StarRow({ rating }: { rating: number }) {
@@ -43,15 +41,13 @@ const LABEL = ["", "Poor", "Fair", "Good", "Great", "Excellent!"];
 
 export default function MyReviewsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    getMyReviews(user.uid)
-      .then((data) => setReviews(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    getMyReviews(user.uid).then(setReviews).catch(() => {}).finally(() => setLoading(false));
   }, [user]);
 
   const avgRating = reviews.length
@@ -65,7 +61,7 @@ export default function MyReviewsPage() {
           <Link href="/profile" className="text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">My Reviews</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("my_reviews")}</h1>
         </div>
       </header>
 
@@ -77,24 +73,23 @@ export default function MyReviewsPage() {
         ) : reviews.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Star className="mx-auto h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-2xl font-semibold text-slate-500">No reviews yet.</p>
-            <p className="mt-2 text-lg text-slate-400">After a completed booking, leave a review for the professional.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_reviews_yet")}</p>
+            <p className="mt-2 text-lg text-slate-400">{t("no_reviews_desc")}</p>
             <Link href="/profile/bookings" className="mt-6 inline-block rounded-2xl bg-violet-600 px-8 py-4 text-xl font-bold text-white hover:bg-violet-700 transition">
-              View Bookings
+              {t("view_bookings")}
             </Link>
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Summary card */}
             <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm flex items-center gap-6">
               <div className="text-center">
                 <p className="text-5xl font-extrabold text-amber-500">{avgRating}</p>
-                <p className="text-lg text-slate-600 mt-1">avg rating</p>
+                <p className="text-lg text-slate-600 mt-1">{t("avg_rating_label")}</p>
               </div>
               <div className="h-16 w-px bg-amber-200" />
               <div>
-                <p className="text-2xl font-bold text-slate-900">{reviews.length} review{reviews.length !== 1 ? "s" : ""} left</p>
-                <p className="text-lg text-slate-500 mt-1">Reviews you wrote for professionals</p>
+                <p className="text-2xl font-bold text-slate-900">{reviews.length} {t("reviews")}</p>
+                <p className="text-lg text-slate-500 mt-1">{t("reviews_written")}</p>
               </div>
             </div>
 
