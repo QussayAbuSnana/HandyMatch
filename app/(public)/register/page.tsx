@@ -57,8 +57,8 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await register(email, password, displayName.trim());
-      // Redirect to role selection
-      router.push("/select-role");
+      // Redirect to photo setup step
+      router.push("/setup-profile");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
