@@ -199,6 +199,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     unread: "unread",
     mark_all_read_btn: "Mark all read",
 
+    // Professional detail page
+    pro_not_found: "Professional not found.",
+    back_to_search: "Back to Search",
+    booking_sent: "Booking Request Sent!",
+    will_respond_shortly: "will respond shortly.",
+    message_btn: "Message",
+    closed: "Closed",
+    rating_label: "Rating",
+    jobs_done_label: "Jobs Done",
+    day_sunday: "Sunday",
+    day_monday: "Monday",
+    day_tuesday: "Tuesday",
+    day_wednesday: "Wednesday",
+    day_thursday: "Thursday",
+    day_friday: "Friday",
+    day_saturday: "Saturday",
+
     // Auth pages
     welcome_back_sign_in: "Welcome back! Sign in to continue",
     create_account_sub: "Create your account to get started",
@@ -463,6 +480,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     unread: "לא נקראו",
     mark_all_read_btn: "סמן הכל כנקרא",
 
+    // Professional detail page
+    pro_not_found: "בעל המקצוע לא נמצא.",
+    back_to_search: "חזרה לחיפוש",
+    booking_sent: "בקשת ההזמנה נשלחה!",
+    will_respond_shortly: "יגיב בקרוב.",
+    message_btn: "הודעה",
+    closed: "סגור",
+    rating_label: "דירוג",
+    jobs_done_label: "עבודות הושלמו",
+    day_sunday: "ראשון",
+    day_monday: "שני",
+    day_tuesday: "שלישי",
+    day_wednesday: "רביעי",
+    day_thursday: "חמישי",
+    day_friday: "שישי",
+    day_saturday: "שבת",
+
     // Auth pages
     welcome_back_sign_in: "ברוך שובך! התחבר כדי להמשיך",
     create_account_sub: "צור את חשבונך כדי להתחיל",
@@ -726,6 +760,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     no_notifications_pro: "ستظهر هنا أنشطة الحجوزات والرسائل والتقييمات.",
     unread: "غير مقروء",
     mark_all_read_btn: "تحديد الكل كمقروء",
+
+    // Professional detail page
+    pro_not_found: "المحترف غير موجود.",
+    back_to_search: "العودة للبحث",
+    booking_sent: "تم إرسال طلب الحجز!",
+    will_respond_shortly: "سيرد قريبًا.",
+    message_btn: "رسالة",
+    closed: "مغلق",
+    rating_label: "التقييم",
+    jobs_done_label: "الأعمال المنجزة",
+    day_sunday: "الأحد",
+    day_monday: "الاثنين",
+    day_tuesday: "الثلاثاء",
+    day_wednesday: "الأربعاء",
+    day_thursday: "الخميس",
+    day_friday: "الجمعة",
+    day_saturday: "السبت",
 
     // Auth pages
     welcome_back_sign_in: "مرحبًا بعودتك! سجّل الدخول للمتابعة",
