@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { subscribeConversations } from "@/lib/firestore";
 import { Conversation } from "@/lib/types";
 import ProSideMenu from "@/components/shared/ProSideMenu";
+import { useLanguage } from "@/lib/language-context";
 
 function timeAgo(ts: unknown): string {
   if (!ts) return "";
@@ -20,6 +21,7 @@ function timeAgo(ts: unknown): string {
 
 export default function ProMessagesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
@@ -35,7 +37,7 @@ export default function ProMessagesPage() {
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <button onClick={() => setMenuOpen(true)} className="text-gray-600"><Menu className="h-8 w-8" /></button>
-          <h1 className="text-3xl font-bold text-slate-900">Messages</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("messages")}</h1>
           <Link href="/pro/notifications" className="relative text-gray-600">
             <Bell className="h-8 w-8" />
             <span className="absolute -right-1 top-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-pink-500" />
@@ -44,13 +46,13 @@ export default function ProMessagesPage() {
       </header>
 
       <section className="mx-auto max-w-7xl px-5 pt-8">
-        <h2 className="mb-6 text-3xl font-bold text-slate-900">Customer Conversations</h2>
+        <h2 className="mb-6 text-3xl font-bold text-slate-900">{t("customer_conversations")}</h2>
 
         {conversations.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <MessageSquare className="mx-auto h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-2xl font-semibold text-slate-500">No messages yet.</p>
-            <p className="mt-2 text-lg text-slate-400">Customers will appear here once they contact you.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_messages")}</p>
+            <p className="mt-2 text-lg text-slate-400">{t("customers_appear_here")}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -87,16 +89,16 @@ export default function ProMessagesPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
           <Link href="/pro/dashboard" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">Dashboard</span>
+            <Briefcase className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("dashboard")}</span>
           </Link>
           <Link href="/pro/jobs" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">Jobs</span>
+            <CalendarDays className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("jobs")}</span>
           </Link>
           <Link href="/pro/messages" className="flex flex-col items-center justify-center rounded-[1.25rem] bg-violet-100 px-4 py-3 text-violet-700">
-            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">Messages</span>
+            <MessageSquare className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("messages")}</span>
           </Link>
           <Link href="/pro/profile" className="flex flex-col items-center justify-center rounded-[1.25rem] px-4 py-3 text-slate-500 transition hover:bg-slate-100">
-            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">Profile</span>
+            <User className="h-7 w-7" /><span className="mt-1 text-base font-medium">{t("profile")}</span>
           </Link>
         </div>
       </nav>

@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { subscribeNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firestore";
 import { Notification } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
 function getProAction(n: Notification): { href: string; label: string } | null {
   switch (n.type) {
@@ -43,6 +44,7 @@ function timeAgo(n: Notification): string {
 
 export default function ProNotificationsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,18 +89,18 @@ export default function ProNotificationsPage() {
             <div className="flex items-center gap-3">
               {unreadCount > 0 && (
                 <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-bold">
-                  {unreadCount} unread
+                  {unreadCount} {t("unread")}
                 </span>
               )}
               <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
-                Notifications
+                {t("notifications")}
               </div>
             </div>
           </div>
-          <p className="text-lg text-white/85">Professional activity center</p>
-          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">Notifications</h1>
+          <p className="text-lg text-white/85">{t("professional_activity")}</p>
+          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">{t("notifications")}</h1>
           <p className="mt-3 text-lg text-white/85">
-            Track new requests, messages, reviews, and booking updates.
+            {t("stay_updated_desc")}
           </p>
         </div>
       </section>
@@ -111,9 +113,9 @@ export default function ProNotificationsPage() {
               <Bell className="h-7 w-7" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Stay Updated</h2>
+              <h2 className="text-2xl font-bold text-slate-900">{t("stay_updated")}</h2>
               <p className="mt-2 text-lg leading-8 text-slate-600">
-                Important activity appears here so you can respond faster and keep customers informed.
+                {t("stay_updated_desc")}
               </p>
             </div>
           </div>
@@ -124,7 +126,7 @@ export default function ProNotificationsPage() {
               className="shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white hover:bg-blue-700 transition disabled:opacity-60"
             >
               <CheckCheck className="h-5 w-5" />
-              {markingAll ? "Marking…" : "Mark all read"}
+              {markingAll ? "…" : t("mark_all_read_btn")}
             </button>
           )}
         </div>
@@ -139,8 +141,8 @@ export default function ProNotificationsPage() {
         ) : notifications.length === 0 ? (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-12 text-center shadow-sm">
             <Bell className="mx-auto h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-2xl font-semibold text-slate-500">No notifications yet.</p>
-            <p className="mt-2 text-lg text-slate-400">Activity from bookings, messages, and reviews will show here.</p>
+            <p className="text-2xl font-semibold text-slate-500">{t("no_notifications")}</p>
+            <p className="mt-2 text-lg text-slate-400">{t("no_notifications_pro")}</p>
           </div>
         ) : (
           <div className="space-y-4">
