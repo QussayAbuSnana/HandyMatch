@@ -86,8 +86,9 @@ export default function ProSetupPage() {
     if (photoFile) {
       try {
         await uploadProfilePhoto(user, photoFile);
-      } catch {
-        setError(t("profile_saved_photo_failed"));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Photo upload failed: ${msg}`);
         await refreshProfile();
         setSaving(false);
         return;

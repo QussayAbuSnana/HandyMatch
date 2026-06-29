@@ -55,8 +55,9 @@ export default function EditProfilePage() {
     if (photoFile) {
       try {
         await uploadProfilePhoto(user, photoFile);
-      } catch {
-        setError(t("photo_upload_failed"));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Photo upload failed: ${msg}`);
         await refreshProfile();
         setSaving(false);
         return;
