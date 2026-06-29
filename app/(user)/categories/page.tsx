@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Droplets, Zap, Hammer, Paintbrush, Wrench, Wind, Flower2, Shield, Tv, Truck, Scissors, ChefHat } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import CustomerNavBar from "@/components/shared/CustomerNavBar";
 
 export default function CategoriesPage() {
   const { t } = useLanguage();
@@ -23,7 +24,7 @@ export default function CategoriesPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f8f8fb] pb-10">
+    <main className="min-h-screen bg-[#f8f8fb] pb-28">
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-6 text-white">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6 flex items-center justify-between">
@@ -58,6 +59,8 @@ export default function CategoriesPage() {
           })}
         </div>
       </section>
+
+      <CustomerNavBar active="home" />
     </main>
   );
 }

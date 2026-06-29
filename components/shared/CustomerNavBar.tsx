@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { Bell, Home, Search, MessageSquare, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { subscribeNotifications } from "@/lib/firestore";
+import { useLanguage } from "@/lib/language-context";
 
 type Tab = "home" | "search" | "messages" | "notifications" | "profile";
 
 export default function CustomerNavBar({ active }: { active: Tab }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -40,10 +42,10 @@ export default function CustomerNavBar({ active }: { active: Tab }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
       <div className="mx-auto grid max-w-4xl grid-cols-4 gap-3">
-        {navItem("/dashboard",     "home",          <Home className="h-7 w-7" />,          "Home")}
-        {navItem("/search",        "search",        <Search className="h-7 w-7" />,        "Search")}
-        {navItem("/messages",      "messages",      <MessageSquare className="h-7 w-7" />, "Messages")}
-        {navItem("/profile",       "profile",       <User className="h-7 w-7" />,          "Profile")}
+        {navItem("/dashboard",     "home",          <Home className="h-7 w-7" />,          t("home"))}
+        {navItem("/search",        "search",        <Search className="h-7 w-7" />,        t("search"))}
+        {navItem("/messages",      "messages",      <MessageSquare className="h-7 w-7" />, t("messages"))}
+        {navItem("/profile",       "profile",       <User className="h-7 w-7" />,          t("profile"))}
       </div>
     </nav>
   );
