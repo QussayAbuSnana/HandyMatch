@@ -13,18 +13,19 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
   const { locale, setLocale } = useLanguage();
 
   return (
-    <div className={`flex items-center gap-1 rounded-2xl bg-gray-100 p-1 ${compact ? "text-xs" : "text-sm"}`}>
+    <div className="flex items-center gap-0.5 rounded-xl bg-gray-100 p-0.5">
       {LANGS.map(({ locale: l, label, flag }) => (
         <button
           key={l}
           onClick={() => setLocale(l)}
-          className={`rounded-xl px-2.5 py-1.5 font-bold transition ${
+          className={`rounded-lg px-1.5 py-1 text-xs font-bold transition ${
             locale === l
               ? "bg-white text-violet-700 shadow-sm"
               : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          {flag} {label}
+          <span>{flag}</span>
+          <span className={compact ? "hidden" : "hidden sm:inline ml-0.5"}>{label}</span>
         </button>
       ))}
     </div>
