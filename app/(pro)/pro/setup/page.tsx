@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
 import { uploadProfilePhoto } from "@/lib/storage";
 import { updateProfile } from "firebase/auth";
+import { useLanguage } from "@/lib/language-context";
 
 const SERVICE_OPTIONS = [
   "Plumbing", "Electrical", "Carpentry", "Painting",
@@ -16,6 +17,7 @@ const SERVICE_OPTIONS = [
 
 export default function ProSetupPage() {
   const { user, userProfile, refreshProfile } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,18 +57,17 @@ export default function ProSetupPage() {
     e.preventDefault();
     if (!user) return;
     if (selectedServices.length === 0) {
-      setError("Please select at least one service.");
+      setError(t("please_select_service"));
       return;
     }
     if (!hourlyRate || isNaN(Number(hourlyRate))) {
-      setError("Please enter a valid hourly rate.");
+      setError(t("valid_hourly_rate"));
       return;
     }
 
     setSaving(true);
     setError("");
 
-    // Step 1: Save profile fields (always, regardless of photo)
     try {
       await updateUserProfile(user.uid, {
         bio,
@@ -74,21 +75,19 @@ export default function ProSetupPage() {
         hourlyRate: Number(hourlyRate),
         location,
         phone,
-        // Only set defaults on first setup
         ...(isEditing ? {} : { rating: 0, reviewCount: 0, jobCount: 0, isAvailable: true }),
       } as Parameters<typeof updateUserProfile>[1]);
     } catch {
-      setError("Failed to save profile. Please try again.");
+      setError(t("save_profile_failed"));
       setSaving(false);
       return;
     }
 
-    // Step 2: Try photo upload separately — don't block save if it fails
     if (photoFile) {
       try {
         await uploadProfilePhoto(user, photoFile);
       } catch {
-        setError("Profile saved, but photo upload failed. Check Firebase Storage rules.");
+        setError(t("profile_saved_photo_failed"));
         await refreshProfile();
         setSaving(false);
         return;
@@ -103,14 +102,17 @@ export default function ProSetupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-pink-500 p-4 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="bg-white p-3 rounded-2xl shadow-lg mb-4 inline-flex">
             <Hammer className="w-8 h-8 text-violet-600" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">{isEditing ? "Edit Your Profile" : "Set Up Your Profile"}</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">
+            {isEditing ? t("edit_your_profile") : t("setup_your_profile")}
+          </h1>
           <p className="text-violet-100 text-lg">
-            {isEditing ? "Update your services, rate, and details." : `Welcome, ${userProfile?.displayName?.split(" ")[0]}! Tell customers about yourself.`}
+            {isEditing
+              ? t("update_services_rate")
+              : `${t("welcome_comma")} ${userProfile?.displayName?.split(" ")[0]}! ${t("setup_welcome")}`}
           </p>
         </div>
 
@@ -140,7 +142,7 @@ export default function ProSetupPage() {
               onClick={() => fileInputRef.current?.click()}
               className="text-sm font-semibold text-violet-600 hover:underline"
             >
-              {photoPreview ? "Change photo" : "Add profile photo"}
+              {photoPreview ? t("change_photo") : t("add_profile_photo_btn")}
             </button>
             <input
               ref={fileInputRef}
@@ -158,19 +160,20 @@ export default function ProSetupPage() {
 
           {/* Bio */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-600 ml-1">Bio / About You</label>
+            <label className="text-sm font-semibold text-gray-600 ml-1">{t("bio_about_you")}</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="e.g. I'm a certified plumber with 5 years of experience in residential repairs…"
               rows={3}
+              dir="auto"
               className="w-full px-4 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 resize-none"
             />
           </div>
 
           {/* Services */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-600 ml-1">Services You Offer</label>
+            <label className="text-sm font-semibold text-gray-600 ml-1">{t("services_you_offer")}</label>
             <div className="flex flex-wrap gap-2">
               {SERVICE_OPTIONS.map((s) => (
                 <button
@@ -188,7 +191,6 @@ export default function ProSetupPage() {
               ))}
             </div>
 
-            {/* Selected custom services */}
             {selectedServices.filter((s) => !SERVICE_OPTIONS.includes(s)).map((s) => (
               <span key={s} className="inline-flex items-center gap-1 rounded-full bg-violet-600 text-white px-4 py-2 text-base font-medium mr-2">
                 {s}
@@ -196,14 +198,14 @@ export default function ProSetupPage() {
               </span>
             ))}
 
-            {/* Add custom */}
             <div className="flex gap-2 mt-2">
               <input
                 type="text"
                 value={customService}
                 onChange={(e) => setCustomService(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomService())}
-                placeholder="Add custom service…"
+                placeholder={t("add_custom_service_ph")}
+                dir="auto"
                 className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700"
               />
               <button
@@ -211,14 +213,14 @@ export default function ProSetupPage() {
                 onClick={addCustomService}
                 className="flex items-center gap-2 rounded-2xl bg-violet-100 px-4 py-3 text-violet-700 font-semibold hover:bg-violet-200 transition"
               >
-                <Plus className="h-5 w-5" /> Add
+                <Plus className="h-5 w-5" /> {t("add_btn")}
               </button>
             </div>
           </div>
 
           {/* Hourly rate */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-600 ml-1">Hourly Rate (USD)</label>
+            <label className="text-sm font-semibold text-gray-600 ml-1">{t("hourly_rate_usd")}</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-4 flex items-center text-gray-400 text-xl font-semibold">$</span>
               <input
@@ -235,12 +237,13 @@ export default function ProSetupPage() {
 
           {/* Location */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-600 ml-1">Your Location / City</label>
+            <label className="text-sm font-semibold text-gray-600 ml-1">{t("location_city")}</label>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Downtown, New York"
+              dir="auto"
               className="w-full px-4 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700"
               required
             />
@@ -248,7 +251,7 @@ export default function ProSetupPage() {
 
           {/* Phone */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-600 ml-1">Phone Number</label>
+            <label className="text-sm font-semibold text-gray-600 ml-1">{t("phone")}</label>
             <input
               type="tel"
               value={phone}
@@ -263,7 +266,7 @@ export default function ProSetupPage() {
             disabled={saving}
             className="w-full py-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white font-bold rounded-2xl shadow-lg hover:opacity-95 transition text-lg disabled:opacity-60"
           >
-            {saving ? "Saving…" : isEditing ? "Save Changes" : "Complete Setup →"}
+            {saving ? t("saving") : isEditing ? t("save_changes") : t("complete_setup")}
           </button>
         </form>
       </div>

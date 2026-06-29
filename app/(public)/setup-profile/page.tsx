@@ -8,9 +8,11 @@ import { updateProfile } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "@/lib/firebase";
+import { useLanguage } from "@/lib/language-context";
 
 export default function SetupProfilePage() {
   const { user, userProfile, loading, refreshProfile } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
 
   const [preview, setPreview] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export default function SetupProfilePage() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > 5 * 1024 * 1024) {
-      setError("Photo must be under 5 MB.");
+      setError(t("photo_too_large"));
       return;
     }
     setError("");
@@ -54,9 +56,9 @@ export default function SetupProfilePage() {
     } catch (err: unknown) {
       const msg = (err as { code?: string })?.code ?? "";
       if (msg.includes("unauthorized") || msg.includes("permission")) {
-        setError("Storage permission denied. Ask your admin to update Firebase Storage rules.");
+        setError(t("storage_denied"));
       } else {
-        setError("Upload failed. Please try again.");
+        setError(t("upload_failed"));
       }
     } finally {
       setUploading(false);
@@ -97,8 +99,8 @@ export default function SetupProfilePage() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-extrabold text-slate-900 mt-4">Add a Profile Photo</h1>
-        <p className="mt-2 text-lg text-slate-500">Help professionals and customers recognise you</p>
+        <h1 className="text-3xl font-extrabold text-slate-900 mt-4">{t("add_profile_photo")}</h1>
+        <p className="mt-2 text-lg text-slate-500">{t("setup_profile_desc")}</p>
 
         {/* Avatar */}
         <div className="relative mx-auto mt-8 mb-6 w-36 h-36">
@@ -114,7 +116,6 @@ export default function SetupProfilePage() {
             </div>
           )}
 
-          {/* Camera button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg border-2 border-white hover:bg-violet-700 transition"
@@ -137,10 +138,10 @@ export default function SetupProfilePage() {
           className="inline-flex items-center gap-2 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 px-6 py-3 text-base font-semibold text-violet-700 hover:bg-violet-100 transition"
         >
           <Upload className="h-5 w-5" />
-          {preview ? "Change Photo" : "Upload Photo"}
+          {preview ? t("change_photo") : t("upload_photo")}
         </button>
 
-        <p className="mt-2 text-sm text-slate-400">JPG, PNG or WEBP · Max 5 MB</p>
+        <p className="mt-2 text-sm text-slate-400">{t("file_types_hint")}</p>
 
         {error && (
           <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-xl px-4 py-2">{error}</p>
@@ -155,14 +156,14 @@ export default function SetupProfilePage() {
           {uploading ? (
             <>
               <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              Uploading…
+              {t("uploading")}
             </>
           ) : (
             <>
               {preview ? (
-                <><CheckCircle2 className="h-5 w-5" /> Save & Continue</>
+                <><CheckCircle2 className="h-5 w-5" /> {t("save_continue")}</>
               ) : (
-                <>Continue <ArrowRight className="h-5 w-5" /></>
+                <>{t("continue_btn")} <ArrowRight className="h-5 w-5" /></>
               )}
             </>
           )}
@@ -172,7 +173,7 @@ export default function SetupProfilePage() {
           onClick={handleSkip}
           className="mt-3 w-full py-3 text-base font-semibold text-slate-400 hover:text-slate-600 transition"
         >
-          Skip for now
+          {t("skip_for_now")}
         </button>
       </div>
     </div>

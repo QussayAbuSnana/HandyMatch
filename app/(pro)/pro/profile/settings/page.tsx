@@ -9,9 +9,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
+import { useLanguage } from "@/lib/language-context";
 
 export default function ProSettingsPage() {
   const { user, userProfile, updateUserRole, refreshProfile } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [switching, setSwitching] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -22,7 +24,6 @@ export default function ProSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Load existing settings from profile
   useEffect(() => {
     if (!userProfile?.settings) return;
     const s = userProfile.settings;
@@ -50,7 +51,7 @@ export default function ProSettingsPage() {
       await refreshProfile();
       setSaved(true);
     } catch {
-      alert("Failed to save settings. Please try again.");
+      alert(t("err_generic"));
     } finally {
       setSaving(false);
     }
@@ -65,39 +66,45 @@ export default function ProSettingsPage() {
               className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
               <ArrowLeft className="h-6 w-6" />
             </Link>
-            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">Settings</div>
+            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">{t("settings")}</div>
           </div>
-          <p className="text-lg text-white/85">Professional account</p>
-          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">Account Settings</h1>
-          <p className="mt-3 text-lg text-white/85">Manage your notifications, visibility, and account preferences.</p>
+          <p className="text-lg text-white/85">{t("pro_account")}</p>
+          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">{t("account_settings")}</h1>
+          <p className="mt-3 text-lg text-white/85">{t("pro_settings_desc")}</p>
         </div>
       </section>
 
       <section className="mx-auto -mt-4 max-w-4xl px-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-5 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Bell className="h-6 w-6 text-violet-600" /> Notification Preferences
+            <Bell className="h-6 w-6 text-violet-600" /> {t("notification_prefs")}
           </h2>
           <div className="space-y-4">
             <SettingRow
               icon={<Mail className="h-5 w-5" />}
-              title="Email Notifications"
-              description="Receive updates about bookings and messages by email."
+              title={t("email_notifications")}
+              description={t("email_notifications_desc")}
               enabled={emailNotifications}
+              enabledLabel={t("enabled")}
+              disabledLabel={t("disabled_label")}
               onToggle={() => { setEmailNotifications((p) => !p); setSaved(false); }}
             />
             <SettingRow
               icon={<Smartphone className="h-5 w-5" />}
-              title="Push Notifications"
-              description="Get instant alerts when customers send messages or requests."
+              title={t("push_notifications")}
+              description={t("push_notifications_desc")}
               enabled={pushNotifications}
+              enabledLabel={t("enabled")}
+              disabledLabel={t("disabled_label")}
               onToggle={() => { setPushNotifications((p) => !p); setSaved(false); }}
             />
             <SettingRow
               icon={<Bell className="h-5 w-5" />}
-              title="New Request Alerts"
-              description="Be notified immediately when a new customer request appears."
+              title={t("new_request_alerts")}
+              description={t("new_request_alerts_desc")}
               enabled={newRequestAlerts}
+              enabledLabel={t("enabled")}
+              disabledLabel={t("disabled_label")}
               onToggle={() => { setNewRequestAlerts((p) => !p); setSaved(false); }}
             />
           </div>
@@ -107,11 +114,11 @@ export default function ProSettingsPage() {
       <section className="mx-auto max-w-4xl px-5 pt-6">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-5 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Globe className="h-6 w-6 text-violet-600" /> Regional Preferences
+            <Globe className="h-6 w-6 text-violet-600" /> {t("regional_prefs")}
           </h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <label className="mb-3 block text-lg font-semibold text-slate-900">Language</label>
+              <label className="mb-3 block text-lg font-semibold text-slate-900">{t("language_label")}</label>
               <select
                 value={language}
                 onChange={(e) => { setLanguage(e.target.value); setSaved(false); }}
@@ -123,7 +130,7 @@ export default function ProSettingsPage() {
               </select>
             </div>
             <div>
-              <label className="mb-3 block text-lg font-semibold text-slate-900">Profile Visibility</label>
+              <label className="mb-3 block text-lg font-semibold text-slate-900">{t("profile_visibility")}</label>
               <select
                 value={profileVisibility}
                 onChange={(e) => { setProfileVisibility(e.target.value); setSaved(false); }}
@@ -145,8 +152,8 @@ export default function ProSettingsPage() {
               <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">Account Safety Tip</h3>
-              <p className="mt-2 text-slate-600">Keep your account information updated and review your settings regularly to maintain trust and visibility on HandyMatch.</p>
+              <h3 className="text-xl font-bold text-slate-900">{t("account_safety_tip")}</h3>
+              <p className="mt-2 text-slate-600">{t("account_safety_desc")}</p>
             </div>
           </div>
         </div>
@@ -161,11 +168,11 @@ export default function ProSettingsPage() {
             className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-violet-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
           >
             <Save className="h-5 w-5" />
-            {saving ? "Saving…" : "Save Changes"}
+            {saving ? t("saving") : t("save_changes")}
           </button>
           <Link href="/pro/profile"
             className="inline-flex items-center justify-center rounded-[1.2rem] border border-gray-200 bg-white px-6 py-4 text-lg font-semibold text-slate-700 transition hover:bg-gray-50">
-            Cancel
+            {t("cancel")}
           </Link>
         </div>
 
@@ -176,8 +183,8 @@ export default function ProSettingsPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Settings Saved</h3>
-                <p className="mt-1 text-slate-600">Your account preferences have been updated successfully.</p>
+                <h3 className="text-xl font-bold text-slate-900">{t("settings_saved")}</h3>
+                <p className="mt-1 text-slate-600">{t("settings_saved_desc")}</p>
               </div>
             </div>
           </div>
@@ -187,9 +194,9 @@ export default function ProSettingsPage() {
       <section className="mx-auto max-w-4xl px-5 pt-6 pb-10">
         <div className="rounded-[2rem] border border-blue-200 bg-blue-50 p-6 shadow-sm">
           <h2 className="mb-2 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <RefreshCw className="h-6 w-6 text-blue-600" /> Switch Account Type
+            <RefreshCw className="h-6 w-6 text-blue-600" /> {t("switch_account")}
           </h2>
-          <p className="mb-5 text-slate-600">Looking for services instead? Switch to a Customer account.</p>
+          <p className="mb-5 text-slate-600">{t("switch_to_customer_desc")}</p>
           <button
             type="button"
             disabled={switching}
@@ -201,7 +208,7 @@ export default function ProSettingsPage() {
             className="inline-flex items-center gap-2 rounded-[1.2rem] bg-blue-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             <RefreshCw className={`h-5 w-5 ${switching ? "animate-spin" : ""}`} />
-            {switching ? "Switching…" : "Switch to Customer"}
+            {switching ? t("switching") : t("switch_to_customer")}
           </button>
         </div>
       </section>
@@ -214,10 +221,12 @@ type SettingRowProps = {
   title: string;
   description: string;
   enabled: boolean;
+  enabledLabel: string;
+  disabledLabel: string;
   onToggle: () => void;
 };
 
-function SettingRow({ icon, title, description, enabled, onToggle }: SettingRowProps) {
+function SettingRow({ icon, title, description, enabled, enabledLabel, disabledLabel, onToggle }: SettingRowProps) {
   return (
     <div className="flex flex-col gap-4 rounded-[1.5rem] border border-gray-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
       <div className="flex items-start gap-3">
@@ -234,7 +243,7 @@ function SettingRow({ icon, title, description, enabled, onToggle }: SettingRowP
           enabled ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"
         }`}
       >
-        {enabled ? "Enabled" : "Disabled"}
+        {enabled ? enabledLabel : disabledLabel}
       </button>
     </div>
   );
