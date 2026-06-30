@@ -42,9 +42,12 @@ export default function ProfilePage() {
     router.push("/login");
   };
 
-  const memberSince = userProfile?.createdAt
-    ? new Date((userProfile.createdAt as unknown as { seconds: number }).seconds * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-    : "—";
+  const memberSince = (() => {
+    const seconds = (userProfile?.createdAt as unknown as { seconds?: number })?.seconds;
+    if (seconds) return new Date(seconds * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    if (user?.metadata?.creationTime) return new Date(user.metadata.creationTime).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    return "—";
+  })();
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
@@ -83,7 +86,7 @@ export default function ProfilePage() {
             {[
               { value: totalJobs, labelKey: "jobs_posted" },
               { value: completedJobs, labelKey: "completed" },
-              { value: completedJobs > 0 ? "★" : "—", labelKey: "reviewed" },
+              { value: completedJobs, labelKey: "reviewed" },
             ].map((s) => (
               <div key={s.labelKey}>
                 <div className="text-4xl font-bold">{s.value}</div>
