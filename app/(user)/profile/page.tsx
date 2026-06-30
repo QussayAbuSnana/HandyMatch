@@ -71,8 +71,8 @@ export default function ProfilePage() {
                   : <User className="h-12 w-12" />}
               </div>
               <div>
-                <h2 className="text-4xl font-bold">{userProfile?.displayName ?? "Loading…"}</h2>
-                <p className="mt-2 text-2xl text-white/85">{t("member_since")} {memberSince}</p>
+                <h2 className="text-2xl font-bold leading-tight">{userProfile?.displayName ?? "Loading…"}</h2>
+                <p className="mt-1 text-base text-white/85">{t("member_since")} {memberSince}</p>
               </div>
             </div>
             <Link href="/profile/edit" className="shrink-0 rounded-2xl border border-white/30 bg-white/15 px-4 py-2 text-lg font-semibold text-white hover:bg-white/25 transition">
