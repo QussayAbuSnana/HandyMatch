@@ -8,7 +8,7 @@ import {
   Star, MapPin, DollarSign, Ban,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { subscribeCustomerBookings, hasReviewed, updateBookingStatus, createNotification } from "@/lib/firestore";
+import { subscribeCustomerBookings, hasReviewed, updateBookingStatus, createNotification, releaseBookingSlots } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
 import ReviewModal from "@/components/shared/ReviewModal";
 import CancelReasonModal from "@/components/shared/CancelReasonModal";
@@ -64,6 +64,7 @@ export default function BookingsPage() {
     const b = cancelTarget;
     setCancelTarget(null);
     await updateBookingStatus(b.id, "cancelled", { cancelReason: reason });
+    await releaseBookingSlots(b);
     await createNotification(
       b.professionalId,
       "Booking Cancelled",
@@ -215,11 +216,17 @@ export default function BookingsPage() {
                         </button>
                       )}
                       {b.status === "cancelled" && (
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-col items-end gap-2">
                           <XCircle className="h-6 w-6 text-red-400" />
                           {cancelReason && (
                             <span className="text-sm text-slate-400 italic text-right max-w-[160px]">"{cancelReason}"</span>
                           )}
+                          <Link
+                            href={`/search?service=${encodeURIComponent(b.service)}`}
+                            className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2 text-base font-semibold text-violet-600 hover:bg-violet-50 transition"
+                          >
+                            {t("find_professionals")}
+                          </Link>
                         </div>
                       )}
                     </div>
@@ -239,10 +246,10 @@ export default function BookingsPage() {
         />
       )}
 
-      {activeReview && userProfile && (
+      {activeReview && user && userProfile && (
         <ReviewModal
           bookingId={activeReview.id}
-          reviewerId={userProfile.uid}
+          reviewerId={user.uid}
           reviewerName={userProfile.displayName}
           subjectId={activeReview.professionalId}
           subjectName={activeReview.professionalName}

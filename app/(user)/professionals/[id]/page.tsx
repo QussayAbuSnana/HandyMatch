@@ -3,10 +3,10 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase, Heart } from "lucide-react";
 import { WeeklyAvailability } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification, subscribeProBookings } from "@/lib/firestore";
+import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification, subscribeProBookings, addFavorite, removeFavorite } from "@/lib/firestore";
 import { UserProfile, Review, Booking } from "@/lib/types";
 import BookingModal from "@/components/shared/BookingModal";
 import { useLanguage } from "@/lib/language-context";
@@ -20,7 +20,7 @@ const DAY_KEYS: Record<string, string> = {
 
 export default function ProfessionalDetailPage({ params }: Props) {
   const { id } = use(params);
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
 
@@ -30,6 +30,24 @@ export default function ProfessionalDetailPage({ params }: Props) {
   const [booked, setBooked] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [proBookings, setProBookings] = useState<Booking[]>([]);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    setIsFavorite(!!userProfile?.favoriteIds?.includes(id));
+  }, [userProfile, id]);
+
+  const handleToggleFavorite = async () => {
+    if (!user) return;
+    const next = !isFavorite;
+    setIsFavorite(next);
+    try {
+      if (next) await addFavorite(user.uid, id);
+      else await removeFavorite(user.uid, id);
+      await refreshProfile();
+    } catch {
+      setIsFavorite(!next);
+    }
+  };
 
   useEffect(() => {
     getUserProfile(id).then(setPro).finally(() => setLoading(false));
@@ -118,7 +136,13 @@ export default function ProfessionalDetailPage({ params }: Props) {
             <ArrowLeft className="h-8 w-8" />
           </Link>
           <h1 className="text-3xl font-bold text-slate-900">{t("profile")}</h1>
-          <div className="w-8" />
+          <button
+            onClick={handleToggleFavorite}
+            aria-label={t("favorite_providers")}
+            className="text-gray-400 transition hover:text-red-500"
+          >
+            <Heart className={`h-8 w-8 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+          </button>
         </div>
       </header>
 

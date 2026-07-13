@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import VerifyEmailBanner from "@/components/shared/VerifyEmailBanner";
 
 export default function UserLayout({
   children,
@@ -30,5 +31,10 @@ export default function UserLayout({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <VerifyEmailBanner />
+      {children}
+    </>
+  );
 }

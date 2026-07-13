@@ -218,6 +218,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     type_message_ph: "Type a message…",
     today: "Today",
     yesterday: "Yesterday",
+    translated_from: "Translated from",
+    show_original: "Show original",
+    show_translation: "Show translation",
 
     // Pro profile page
     my_profile: "My Profile",
@@ -275,6 +278,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     switching: "Switching…",
     enabled: "Enabled",
     disabled_label: "Disabled",
+    danger_zone: "Danger Zone",
+    delete_account: "Delete Account",
+    delete_account_desc: "Permanently delete your account and login. This cannot be undone.",
+    deleting: "Deleting…",
+    delete_confirm_msg: "This will permanently delete your account and log you out. This cannot be undone. Continue?",
+    delete_account_failed: "Failed to delete account. Please try again.",
+    verify_email_banner: "Please verify your email address to secure your account.",
+    resend_email: "Resend email",
+    email_sent: "Sent!",
+    ive_verified: "I've verified",
 
     // Professional detail page
     pro_not_found: "Professional not found.",
@@ -358,6 +371,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     book_a_pro: "Book a",
     describe_detail: "Please describe the job in a bit more detail.",
     ai_error: "Could not reach the AI. Please try again.",
+    try_again: "Try Again",
 
     // Pro availability page
     manage_availability: "Manage Your Availability",
@@ -645,6 +659,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     type_message_ph: "הקלד הודעה…",
     today: "היום",
     yesterday: "אתמול",
+    translated_from: "מתורגם מ",
+    show_original: "הצג מקור",
+    show_translation: "הצג תרגום",
 
     // Pro profile page
     my_profile: "הפרופיל שלי",
@@ -702,6 +719,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     switching: "מחליף…",
     enabled: "מופעל",
     disabled_label: "מושבת",
+    danger_zone: "אזור מסוכן",
+    delete_account: "מחיקת חשבון",
+    delete_account_desc: "מחיקה סופית של החשבון וההתחברות שלך. לא ניתן לבטל פעולה זו.",
+    deleting: "מוחק…",
+    delete_confirm_msg: "פעולה זו תמחק לצמיתות את החשבון שלך ותנתק אותך. לא ניתן לבטל. להמשיך?",
+    delete_account_failed: "מחיקת החשבון נכשלה. אנא נסה שנית.",
+    verify_email_banner: "אנא אמת את כתובת האימייל שלך כדי לאבטח את חשבונך.",
+    resend_email: "שלח שוב",
+    email_sent: "נשלח!",
+    ive_verified: "אימתתי",
 
     // Professional detail page
     pro_not_found: "בעל המקצוע לא נמצא.",
@@ -785,6 +812,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     book_a_pro: "הזמן",
     describe_detail: "אנא תאר את העבודה בפירוט רב יותר.",
     ai_error: "לא ניתן להגיע ל-AI. אנא נסה שנית.",
+    try_again: "נסה שוב",
 
     // Pro availability page
     manage_availability: "נהל את הזמינות שלך",
@@ -1072,6 +1100,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     type_message_ph: "اكتب رسالة…",
     today: "اليوم",
     yesterday: "أمس",
+    translated_from: "مترجم من",
+    show_original: "إظهار الأصل",
+    show_translation: "إظهار الترجمة",
 
     // Pro profile page
     my_profile: "ملفي الشخصي",
@@ -1129,6 +1160,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     switching: "جارٍ التحويل…",
     enabled: "مفعّل",
     disabled_label: "معطّل",
+    danger_zone: "منطقة الخطر",
+    delete_account: "حذف الحساب",
+    delete_account_desc: "حذف حسابك وتسجيل الدخول نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    deleting: "جارٍ الحذف…",
+    delete_confirm_msg: "سيؤدي هذا إلى حذف حسابك نهائيًا وتسجيل خروجك. لا يمكن التراجع عن هذا. متابعة؟",
+    delete_account_failed: "فشل حذف الحساب. يرجى المحاولة مرة أخرى.",
+    verify_email_banner: "يرجى تأكيد عنوان بريدك الإلكتروني لتأمين حسابك.",
+    resend_email: "إعادة الإرسال",
+    email_sent: "تم الإرسال!",
+    ive_verified: "لقد تحققت",
 
     // Professional detail page
     pro_not_found: "المحترف غير موجود.",
@@ -1212,6 +1253,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     book_a_pro: "احجز",
     describe_detail: "يرجى وصف الوظيفة بمزيد من التفصيل.",
     ai_error: "تعذر الوصول إلى الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.",
+    try_again: "أعد المحاولة",
 
     // Pro availability page
     manage_availability: "إدارة جدولك الزمني",

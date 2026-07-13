@@ -3,16 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Bell, Shield, Globe, Save, CheckCircle2, Mail, Smartphone, RefreshCw } from "lucide-react";
+import { ArrowLeft, Bell, Shield, Globe, Save, CheckCircle2, Mail, Smartphone, RefreshCw, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
 import { useLanguage } from "@/lib/language-context";
 
 export default function CustomerSettingsPage() {
-  const { user, userProfile, updateUserRole, refreshProfile } = useAuth();
+  const { user, userProfile, updateUserRole, refreshProfile, logout } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
   const [switching, setSwitching] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [bookingUpdates, setBookingUpdates] = useState(true);
@@ -28,6 +29,25 @@ export default function CustomerSettingsPage() {
     setBookingUpdates(s.bookingUpdates ?? true);
     setLanguage(s.language ?? "English");
   }, [userProfile]);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    if (!confirm(t("delete_confirm_msg"))) return;
+    setDeleting(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) throw new Error("delete failed");
+      await logout();
+      router.push("/login");
+    } catch {
+      alert(t("delete_account_failed"));
+      setDeleting(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -152,6 +172,20 @@ export default function CustomerSettingsPage() {
             className="inline-flex items-center gap-2 rounded-[1.2rem] bg-violet-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60">
             <RefreshCw className={`h-5 w-5 ${switching ? "animate-spin" : ""}`} />
             {switching ? t("switching") : t("switch_to_pro")}
+          </button>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-5 pt-6 pb-10">
+        <div className="rounded-[2rem] border border-red-200 bg-red-50 p-6 shadow-sm">
+          <h2 className="mb-2 flex items-center gap-2 text-2xl font-bold text-slate-900">
+            <Trash2 className="h-6 w-6 text-red-600" /> {t("danger_zone")}
+          </h2>
+          <p className="mb-5 text-slate-600">{t("delete_account_desc")}</p>
+          <button type="button" disabled={deleting} onClick={handleDeleteAccount}
+            className="inline-flex items-center gap-2 rounded-[1.2rem] bg-red-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-red-700 disabled:opacity-60">
+            <Trash2 className="h-5 w-5" />
+            {deleting ? t("deleting") : t("delete_account")}
           </button>
         </div>
       </section>

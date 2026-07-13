@@ -183,7 +183,7 @@ export default function EstimatePage() {
                   </div>
                 </div>
                 <div className="ml-12 flex flex-wrap gap-2">
-                  {q.options.map((opt) => (
+                  {(q.options ?? []).map((opt) => (
                     <button
                       key={opt}
                       disabled={answered || loading}
@@ -252,7 +252,7 @@ export default function EstimatePage() {
                   <div className="rounded-[1.5rem] border border-gray-200 bg-white p-5 shadow-sm">
                     <h3 className="mb-3 text-lg font-bold text-slate-900">{t("cost_breakdown")}</h3>
                     <div className="space-y-2">
-                      {est.breakdown.map((item, j) => (
+                      {(est.breakdown ?? []).map((item, j) => (
                         <div key={j} className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
                           <span className="text-sm text-slate-700">{item.item}</span>
                           <span className="text-sm font-bold text-violet-600">{item.amount}</span>
@@ -267,7 +267,7 @@ export default function EstimatePage() {
                       <Lightbulb className="h-5 w-5 text-amber-500" /> {t("tips_heading")}
                     </h3>
                     <div className="space-y-2">
-                      {est.tips.map((tip, j) => (
+                      {(est.tips ?? []).map((tip, j) => (
                         <div key={j} className="flex items-start gap-2">
                           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                           <p className="text-sm text-slate-700">{tip}</p>
@@ -282,7 +282,7 @@ export default function EstimatePage() {
                       <HelpCircle className="h-5 w-5 text-blue-500" /> {t("ask_the_pro")}
                     </h3>
                     <div className="space-y-2">
-                      {est.questionsToAsk.map((q, j) => (
+                      {(est.questionsToAsk ?? []).map((q, j) => (
                         <div key={j} className="flex items-start gap-2">
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 text-xs font-bold text-blue-700">{j + 1}</span>
                           <p className="text-sm text-slate-700">{q}</p>
@@ -336,7 +336,18 @@ export default function EstimatePage() {
         )}
 
         {error && (
-          <p className="rounded-2xl bg-red-50 px-5 py-3 text-sm text-red-600">{error}</p>
+          <div className="flex flex-col items-start gap-3 rounded-2xl bg-red-50 px-5 py-4">
+            <p className="text-sm text-red-600">{error}</p>
+            {messages.length > 0 && (
+              <button
+                onClick={() => sendToAI(description, answers)}
+                disabled={loading}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {t("try_again")}
+              </button>
+            )}
+          </div>
         )}
 
         <div ref={bottomRef} />

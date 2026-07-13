@@ -9,19 +9,21 @@ import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Message, Conversation } from "@/lib/types";
 import { useLanguage } from "@/lib/language-context";
+import { useMessageTranslation } from "@/lib/useMessageTranslation";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default function ChatPage({ params }: Props) {
   const { id: conversationId } = use(params);
   const { user, userProfile } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { translations, isRevealed, toggleOriginal } = useMessageTranslation(messages, locale);
 
   useEffect(() => {
     getDoc(doc(db, "conversations", conversationId)).then((snap) => {
@@ -147,8 +149,21 @@ export default function ChatPage({ params }: Props) {
                         ? "bg-violet-600 text-white rounded-br-sm"
                         : "bg-white text-slate-900 border border-gray-200 rounded-bl-sm"
                     }`}>
-                      <p className="text-lg leading-relaxed">{msg.text}</p>
+                      <p className="text-lg leading-relaxed">
+                        {translations[msg.id] && !isRevealed(msg.id) ? translations[msg.id].translatedText : msg.text}
+                      </p>
                     </div>
+                    {translations[msg.id] && (
+                      <button
+                        type="button"
+                        onClick={() => toggleOriginal(msg.id)}
+                        className={`mt-1 text-xs px-1 underline underline-offset-2 ${isMe ? "text-slate-400 text-right" : "text-slate-400"}`}
+                      >
+                        {isRevealed(msg.id)
+                          ? t("show_translation")
+                          : `${t("translated_from")} ${translations[msg.id].sourceLanguage}`}
+                      </button>
+                    )}
                     <p className={`mt-1 text-xs px-1 ${isMe ? "text-slate-400 text-right" : "text-slate-400"}`}>
                       {formatTime(msg.createdAt)}
                     </p>

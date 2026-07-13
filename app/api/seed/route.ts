@@ -208,7 +208,8 @@ export async function POST() {
     for (const pro of PROFESSIONALS) {
       let uid: string;
       try { uid = (await adminAuth.getUserByEmail(pro.email)).uid; }
-      catch { uid = (await adminAuth.createUser({ email: pro.email, password: pro.password, displayName: pro.displayName })).uid; }
+      catch { uid = (await adminAuth.createUser({ email: pro.email, password: pro.password, displayName: pro.displayName, emailVerified: true })).uid; }
+      await adminAuth.updateUser(uid, { emailVerified: true }).catch(() => {});
 
       await db.collection("users").doc(uid).set({
         uid, email: pro.email, displayName: pro.displayName,
@@ -225,7 +226,8 @@ export async function POST() {
     for (const cust of CUSTOMERS) {
       let uid: string;
       try { uid = (await adminAuth.getUserByEmail(cust.email)).uid; }
-      catch { uid = (await adminAuth.createUser({ email: cust.email, password: cust.password, displayName: cust.displayName })).uid; }
+      catch { uid = (await adminAuth.createUser({ email: cust.email, password: cust.password, displayName: cust.displayName, emailVerified: true })).uid; }
+      await adminAuth.updateUser(uid, { emailVerified: true }).catch(() => {});
 
       await db.collection("users").doc(uid).set({
         uid, email: cust.email, displayName: cust.displayName,

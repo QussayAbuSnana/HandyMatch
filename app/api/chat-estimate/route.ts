@@ -3,6 +3,37 @@ import { NextRequest, NextResponse } from "next/server";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+/** Guards against a response that parses as JSON but doesn't match the shape the UI expects. */
+function isValidResult(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const r = result as Record<string, unknown>;
+
+  if (r.type === "question") {
+    return (
+      typeof r.question === "string" &&
+      Array.isArray(r.options) &&
+      r.options.length > 0 &&
+      r.options.every((o) => typeof o === "string")
+    );
+  }
+
+  if (r.type === "estimate") {
+    const priceRange = r.priceRange as Record<string, unknown> | undefined;
+    return (
+      typeof r.category === "string" &&
+      typeof r.summary === "string" &&
+      !!priceRange && typeof priceRange.min === "number" && typeof priceRange.max === "number" &&
+      typeof r.estimatedHours === "number" &&
+      typeof r.complexity === "string" &&
+      Array.isArray(r.breakdown) &&
+      Array.isArray(r.tips) &&
+      Array.isArray(r.questionsToAsk)
+    );
+  }
+
+  return false;
+}
+
 export async function POST(req: NextRequest) {
   const { description, answers } = await req.json() as {
     description: string;
@@ -67,10 +98,10 @@ Estimate format:
   "questionsToAsk": ["<question>", "<question>"]
 }`;
 
-  try {
+  const runCompletion = async () => {
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         {
           role: "system",
@@ -82,16 +113,29 @@ Estimate format:
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? "";
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return NextResponse.json({ error: "Could not parse response." }, { status: 500 });
+    if (!match) throw new Error("No JSON found in AI response");
 
     // Remove newlines inside JSON string values to prevent parse errors
     const cleaned = match[0].replace(/("(?:[^"\\]|\\.)*")/g, (s) =>
       s.replace(/\n/g, " ").replace(/\r/g, "")
     );
-    return NextResponse.json(JSON.parse(cleaned));
+    const parsed = JSON.parse(cleaned);
+    if (!isValidResult(parsed)) throw new Error("AI response did not match the expected shape");
+    return parsed;
+  };
+
+  try {
+    let result;
+    try {
+      result = await runCompletion();
+    } catch (firstErr) {
+      // The model occasionally returns malformed/truncated JSON — one retry usually succeeds.
+      console.error("chat-estimate parse failed, retrying once:", firstErr);
+      result = await runCompletion();
+    }
+    return NextResponse.json(result);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("chat-estimate error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("chat-estimate error (after retry):", e);
+    return NextResponse.json({ error: "Could not generate an estimate right now. Please try again." }, { status: 500 });
   }
 }

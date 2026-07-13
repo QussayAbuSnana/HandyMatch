@@ -189,6 +189,9 @@ export default function SearchPage() {
             <p className="mt-2 text-lg text-slate-400">
               {professionals.length === 0 ? t("no_professionals_found") : t("try_different_search")}
             </p>
+            <Link href="/categories" className="mt-6 inline-block rounded-2xl bg-violet-600 px-8 py-4 text-xl font-bold text-white hover:bg-violet-700 transition">
+              {t("view_all_categories")}
+            </Link>
           </div>
         )}
 

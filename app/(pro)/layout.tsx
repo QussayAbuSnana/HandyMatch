@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import VerifyEmailBanner from "@/components/shared/VerifyEmailBanner";
 
 export default function ProLayout({
   children,
@@ -38,5 +39,10 @@ export default function ProLayout({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <VerifyEmailBanner />
+      {children}
+    </>
+  );
 }

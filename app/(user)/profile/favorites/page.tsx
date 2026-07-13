@@ -4,45 +4,30 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Heart, Star, MapPin, Clock3 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getProfessionals } from "@/lib/firestore";
+import { getProfessionals, removeFavorite } from "@/lib/firestore";
 import { UserProfile } from "@/lib/types";
 import { useLanguage } from "@/lib/language-context";
 
-const STORAGE_KEY = "hm_favorites";
-
-function getFavoriteIds(): string[] {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); } catch { return []; }
-}
-
-export function toggleFavorite(uid: string) {
-  const ids = getFavoriteIds();
-  const next = ids.includes(uid) ? ids.filter((id) => id !== uid) : [...ids, uid];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-}
-
-export function isFavorite(uid: string): boolean {
-  return getFavoriteIds().includes(uid);
-}
-
 export default function FavoritesPage() {
-  const { user } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const { t } = useLanguage();
   const [pros, setPros] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
+    const ids = userProfile?.favoriteIds ?? [];
     getProfessionals().then((all) => {
-      const ids = getFavoriteIds();
       setPros(all.filter((p) => ids.includes(p.uid)));
       setLoading(false);
     });
-  }, [user]);
+  }, [user, userProfile]);
 
-  const handleUnfavorite = (uid: string) => {
-    toggleFavorite(uid);
+  const handleUnfavorite = async (uid: string) => {
     setPros((prev) => prev.filter((p) => p.uid !== uid));
+    if (!user) return;
+    await removeFavorite(user.uid, uid);
+    await refreshProfile();
   };
 
   const proData = (p: UserProfile) => p as unknown as {
