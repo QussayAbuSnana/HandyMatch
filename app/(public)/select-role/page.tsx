@@ -5,30 +5,26 @@ import { useRouter } from "next/navigation";
 import { Users, Briefcase, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 
 export default function SelectRolePage() {
   const { user, userProfile, loading, updateUserRole } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        router.replace("/login");
-      } else if (userProfile?.role === "customer") {
-        router.replace("/dashboard");
-      } else if (userProfile?.role === "professional") {
-        router.replace("/pro/dashboard");
-      }
+      if (!user) router.replace("/login");
+      else if (userProfile?.role === "customer") router.replace("/dashboard");
+      else if (userProfile?.role === "professional") router.replace("/pro/dashboard");
     }
   }, [loading, user, userProfile, router]);
 
   const handleRoleSelect = (role: UserRole) => {
     updateUserRole(role);
-    if (role === "customer") {
-      router.push("/dashboard");
-    } else {
-      router.push("/pro/setup");
-    }
+    if (role === "customer") router.push("/dashboard");
+    else router.push("/pro/setup");
   };
 
   const spinner = (
@@ -42,6 +38,8 @@ export default function SelectRolePage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-4 font-sans relative overflow-hidden">
+      <div className="absolute top-4 right-4"><LanguageSwitcher /></div>
+
       {/* Welcome toast */}
       <div className="fixed top-8 z-50 flex items-center bg-[#f0fff4] border border-green-100 rounded-2xl px-6 py-4 shadow-2xl">
         <div className="bg-green-500 rounded-full p-1 mr-4">
@@ -49,9 +47,9 @@ export default function SelectRolePage() {
         </div>
         <div>
           <p className="text-[#065f46] font-bold text-base">
-            Welcome, {userProfile?.displayName || "there"}!
+            {t("welcome_comma")} {userProfile?.displayName || ""}!
           </p>
-          <p className="text-[#059669] text-sm">Account created successfully.</p>
+          <p className="text-[#059669] text-sm">{t("account_created")}</p>
         </div>
       </div>
 
@@ -59,9 +57,7 @@ export default function SelectRolePage() {
         <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">
           HandyMatch
         </h1>
-        <p className="text-blue-100 text-xl font-medium opacity-90">
-          How will you use HandyMatch?
-        </p>
+        <p className="text-blue-100 text-xl font-medium opacity-90">{t("how_use")}</p>
       </div>
 
       <div className="w-full max-w-2xl space-y-6">
@@ -74,12 +70,10 @@ export default function SelectRolePage() {
               <Users className="w-10 h-10 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">I&apos;m a Customer</h2>
-              <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">
-                Find and book trusted professionals for your home services
-              </p>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">{t("im_customer")}</h2>
+              <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">{t("customer_role_desc")}</p>
               <div className="flex items-center text-blue-600 font-bold text-lg group-hover:translate-x-2 transition-transform">
-                Get Started <ArrowRight className="ml-2 w-5 h-5" />
+                {t("get_started")} <ArrowRight className="ml-2 w-5 h-5" />
               </div>
             </div>
           </div>
@@ -94,12 +88,10 @@ export default function SelectRolePage() {
               <Briefcase className="w-10 h-10 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">I&apos;m a Professional</h2>
-              <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">
-                Manage your business and connect with customers
-              </p>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">{t("im_professional")}</h2>
+              <p className="text-gray-500 font-medium text-lg mb-4 leading-relaxed">{t("pro_role_desc")}</p>
               <div className="flex items-center text-purple-600 font-bold text-lg group-hover:translate-x-2 transition-transform">
-                Access Dashboard <ArrowRight className="ml-2 w-5 h-5" />
+                {t("access_dashboard")} <ArrowRight className="ml-2 w-5 h-5" />
               </div>
             </div>
           </div>

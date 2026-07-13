@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ProSideMenu from "@/components/shared/ProSideMenu";
 import { Bell, Menu, Briefcase, CalendarDays, MessageSquare, User, MapPin, Clock3, DollarSign, CheckCircle2, XCircle, Wrench, Star } from "lucide-react";
 import TravelTimeBadge from "@/components/shared/TravelTimeBadge";
 import { useAuth } from "@/lib/auth-context";
-import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed } from "@/lib/firestore";
+import { subscribeProBookings, updateBookingStatus, createNotification, hasReviewed, getOrCreateConversation, releaseBookingSlots } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
 import ReviewModal from "@/components/shared/ReviewModal";
 import { useLanguage } from "@/lib/language-context";
@@ -14,6 +15,7 @@ import { useLanguage } from "@/lib/language-context";
 export default function ProJobsPage() {
   const { user, userProfile } = useAuth();
   const { t } = useLanguage();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,9 +64,16 @@ export default function ProJobsPage() {
     }
   };
 
+  const handleMessage = async (booking: Booking) => {
+    if (!user || !userProfile) return;
+    const convId = await getOrCreateConversation(user.uid, booking.customerId, userProfile.displayName, booking.customerName);
+    router.push(`/pro/messages/${convId}`);
+  };
+
   const handleDecline = async (booking: Booking) => {
     try {
       await updateBookingStatus(booking.id, "cancelled");
+      await releaseBookingSlots(booking);
       await createNotification(booking.customerId, "Booking Declined", `Your booking request for ${booking.service} was declined.`, "booking_declined", booking.id);
     } catch (e) {
       alert("Failed to decline booking: " + (e instanceof Error ? e.message : String(e)));
@@ -162,7 +171,10 @@ export default function ProJobsPage() {
                         <div className="flex items-center gap-2 text-3xl font-extrabold text-violet-600">
                           <DollarSign className="h-7 w-7" />{req.price}/hr
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
+                          <button onClick={() => handleMessage(req)} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-lg font-semibold text-violet-700 transition hover:bg-violet-100">
+                            <MessageSquare className="h-5 w-5" />{t("message_btn")}
+                          </button>
                           <button onClick={() => handleDecline(req)} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-lg font-semibold text-slate-700 transition hover:bg-gray-50">
                             <XCircle className="h-5 w-5" />{t("decline")}
                           </button>
@@ -283,10 +295,10 @@ export default function ProJobsPage() {
         </>
       )}
 
-      {activeReview && userProfile && (
+      {activeReview && user && userProfile && (
         <ReviewModal
           bookingId={activeReview.id}
-          reviewerId={userProfile.uid}
+          reviewerId={user.uid}
           reviewerName={userProfile.displayName}
           subjectId={activeReview.customerId}
           subjectName={activeReview.customerName}

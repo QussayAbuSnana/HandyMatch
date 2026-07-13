@@ -43,13 +43,36 @@ service cloud.firestore {
       }
     }
 
+    // ── Booking slot locks ────────────────────────────────────────────────────
+    // One doc per professional per hour-bucket a booking occupies (id: `{proId}_{hourBucket}`).
+    // Used inside a transaction to atomically prevent two overlapping bookings for the same pro.
+    match /bookingSlots/{slotId} {
+      allow read, create, delete: if request.auth != null;
+    }
+
     // ── Reviews ────────────────────────────────────────────────────────────────
     // Any signed-in user can read reviews (shown on pro profile).
-    // Only the reviewer can create their own review.
+    // Doc id is deterministic (`{bookingId}_{reviewerId}`), so a second submission for the
+    // same booking+reviewer is an `update` — and since no `allow update` exists, it's denied
+    // automatically, which is our duplicate-review guard.
+    // A create must reference a real, completed booking where the reviewer and subject are
+    // genuinely the two parties on that booking — you can't fabricate a review for a booking
+    // that never happened, never completed, or that you weren't part of.
     match /reviews/{reviewId} {
-      allow read:   if request.auth != null;
+      allow read: if request.auth != null;
       allow create: if request.auth != null &&
-        request.resource.data.reviewerId == request.auth.uid;
+        request.resource.data.reviewerId == request.auth.uid &&
+        reviewId == request.resource.data.bookingId + '_' + request.auth.uid &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.status == "completed" &&
+        (
+          (request.resource.data.type == "customer_to_pro" &&
+           get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.customerId == request.auth.uid &&
+           get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.professionalId == request.resource.data.subjectId)
+          ||
+          (request.resource.data.type == "pro_to_customer" &&
+           get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.professionalId == request.auth.uid &&
+           get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.customerId == request.resource.data.subjectId)
+        );
     }
 
     // ── Notifications ──────────────────────────────────────────────────────────

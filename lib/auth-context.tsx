@@ -15,6 +15,7 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
 } from "firebase/auth";
 import {
   doc,
@@ -33,6 +34,8 @@ interface AuthContextValue {
   userProfile: UserProfile | null;
   /** True while the initial auth state is being resolved */
   loading: boolean;
+  /** Whether the signed-in user has clicked the verification link in their email */
+  emailVerified: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (
     email: string,
@@ -44,6 +47,10 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   /** Re-fetch the Firestore profile so context reflects recent edits */
   refreshProfile: () => Promise<void>;
+  /** Send (or resend) the verification email to the current user */
+  resendVerificationEmail: () => Promise<void>;
+  /** Reload the Firebase Auth user and refresh `emailVerified` — call after the user clicks the email link */
+  checkEmailVerified: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -52,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   // ── Cookie helpers (read by middleware for server-side route protection) ──
   const setRoleCookie = (role: string | null) => {
@@ -94,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(timeout);
       setUser(firebaseUser);
+      setEmailVerified(firebaseUser?.emailVerified ?? false);
       if (firebaseUser) {
         try {
           await fetchUserProfile(firebaseUser);
@@ -129,6 +138,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     // Store displayName in Firebase Auth profile
     await updateProfile(credential.user, { displayName });
+    try {
+      await sendEmailVerification(credential.user);
+    } catch {
+      // Non-fatal — registration should still succeed even if the email fails to send
+    }
     // Create Firestore user doc
     const ref = doc(db, "users", credential.user.uid);
     await setDoc(ref, {
@@ -173,18 +187,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resendVerificationEmail = async () => {
+    if (auth.currentUser) await sendEmailVerification(auth.currentUser);
+  };
+
+  const checkEmailVerified = async (): Promise<boolean> => {
+    if (!auth.currentUser) return false;
+    await auth.currentUser.reload();
+    const verified = auth.currentUser.emailVerified;
+    setEmailVerified(verified);
+    return verified;
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         userProfile,
         loading,
+        emailVerified,
         login,
         register,
         logout,
         updateUserRole,
         resetPassword,
         refreshProfile,
+        resendVerificationEmail,
+        checkEmailVerified,
       }}
     >
       {children}

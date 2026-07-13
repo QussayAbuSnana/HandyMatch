@@ -6,16 +6,7 @@ import { ArrowLeft, Clock3, CalendarDays, MapPin, Save, CheckCircle2, ToggleLeft
 import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
 import { WeeklyAvailability, DaySchedule } from "@/lib/types";
-
-const DAYS: { key: keyof WeeklyAvailability; label: string; short: string }[] = [
-  { key: "sunday",    label: "Sunday",    short: "Sun" },
-  { key: "monday",    label: "Monday",    short: "Mon" },
-  { key: "tuesday",   label: "Tuesday",   short: "Tue" },
-  { key: "wednesday", label: "Wednesday", short: "Wed" },
-  { key: "thursday",  label: "Thursday",  short: "Thu" },
-  { key: "friday",    label: "Friday",    short: "Fri" },
-  { key: "saturday",  label: "Saturday",  short: "Sat" },
-];
+import { useLanguage } from "@/lib/language-context";
 
 const DEFAULT_SCHEDULE: WeeklyAvailability = {
   sunday:    { enabled: false, start: "09:00", end: "17:00" },
@@ -27,8 +18,19 @@ const DEFAULT_SCHEDULE: WeeklyAvailability = {
   saturday:  { enabled: false, start: "09:00", end: "17:00" },
 };
 
+const DAY_KEYS: { key: keyof WeeklyAvailability; labelKey: string }[] = [
+  { key: "sunday",    labelKey: "day_sunday" },
+  { key: "monday",    labelKey: "day_monday" },
+  { key: "tuesday",   labelKey: "day_tuesday" },
+  { key: "wednesday", labelKey: "day_wednesday" },
+  { key: "thursday",  labelKey: "day_thursday" },
+  { key: "friday",    labelKey: "day_friday" },
+  { key: "saturday",  labelKey: "day_saturday" },
+];
+
 export default function ProAvailabilityPage() {
   const { user, userProfile, refreshProfile } = useAuth();
+  const { t } = useLanguage();
 
   const [schedule, setSchedule] = useState<WeeklyAvailability>(DEFAULT_SCHEDULE);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -36,7 +38,6 @@ export default function ProAvailabilityPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Load existing data from profile
   useEffect(() => {
     if (!userProfile) return;
     const pro = userProfile as unknown as { isAvailable?: boolean; serviceArea?: string; availability?: WeeklyAvailability };
@@ -65,7 +66,7 @@ export default function ProAvailabilityPage() {
       await refreshProfile();
       setSaved(true);
     } catch {
-      alert("Failed to save. Please try again.");
+      alert(t("err_generic"));
     } finally {
       setSaving(false);
     }
@@ -73,7 +74,6 @@ export default function ProAvailabilityPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-10">
-      {/* Header banner */}
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-8 pt-6 text-white">
         <div className="mx-auto max-w-4xl">
           <div className="mb-6 flex items-center justify-between">
@@ -81,10 +81,10 @@ export default function ProAvailabilityPage() {
               className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
               <ArrowLeft className="h-6 w-6" />
             </Link>
-            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">Availability</div>
+            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">{t("availability_label")}</div>
           </div>
-          <h1 className="mt-2 text-4xl font-extrabold">Manage Your Availability</h1>
-          <p className="mt-3 text-lg text-white/85">Set your working days and hours so customers know when to book you.</p>
+          <h1 className="mt-2 text-4xl font-extrabold">{t("manage_availability")}</h1>
+          <p className="mt-3 text-lg text-white/85">{t("availability_desc")}</p>
         </div>
       </section>
 
@@ -93,8 +93,8 @@ export default function ProAvailabilityPage() {
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Accepting Bookings</h2>
-              <p className="mt-1 text-slate-500">Turn off to pause all new booking requests.</p>
+              <h2 className="text-2xl font-bold text-slate-900">{t("accepting_bookings")}</h2>
+              <p className="mt-1 text-slate-500">{t("accepting_bookings_desc")}</p>
             </div>
             <button
               type="button"
@@ -104,8 +104,8 @@ export default function ProAvailabilityPage() {
               }`}
             >
               {isAvailable
-                ? <><ToggleRight className="h-6 w-6" /> Available</>
-                : <><ToggleLeft className="h-6 w-6" /> Unavailable</>}
+                ? <><ToggleRight className="h-6 w-6" /> {t("available_badge")}</>
+                : <><ToggleLeft className="h-6 w-6" /> {t("unavailable")}</>}
             </button>
           </div>
         </div>
@@ -115,13 +115,14 @@ export default function ProAvailabilityPage() {
       <section className="mx-auto max-w-4xl px-5 pt-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
           <label className="mb-3 flex items-center gap-2 text-xl font-bold text-slate-900">
-            <MapPin className="h-5 w-5 text-violet-600" /> Service Area
+            <MapPin className="h-5 w-5 text-violet-600" /> {t("service_area")}
           </label>
           <input
             type="text"
             value={serviceArea}
             onChange={(e) => { setServiceArea(e.target.value); setSaved(false); }}
             placeholder="e.g. תל אביב, רמת גן, גבעתיים"
+            dir="auto"
             className="w-full rounded-[1.2rem] border border-gray-200 bg-gray-50 px-4 py-4 text-lg text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
         </div>
@@ -131,11 +132,11 @@ export default function ProAvailabilityPage() {
       <section className="mx-auto max-w-4xl px-5 pt-5">
         <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-6 flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <CalendarDays className="h-6 w-6 text-violet-600" /> Weekly Schedule
+            <CalendarDays className="h-6 w-6 text-violet-600" /> {t("weekly_schedule")}
           </h2>
 
           <div className="space-y-4">
-            {DAYS.map(({ key, label }) => {
+            {DAY_KEYS.map(({ key, labelKey }) => {
               const day = schedule[key];
               return (
                 <div key={key}
@@ -144,7 +145,6 @@ export default function ProAvailabilityPage() {
                   }`}
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    {/* Day toggle */}
                     <button
                       type="button"
                       onClick={() => updateDay(key, "enabled", !day.enabled)}
@@ -158,11 +158,10 @@ export default function ProAvailabilityPage() {
                         }`} />
                       </div>
                       <span className={`text-xl font-bold ${day.enabled ? "text-violet-700" : "text-slate-400"}`}>
-                        {label}
+                        {t(labelKey)}
                       </span>
                     </button>
 
-                    {/* Time pickers */}
                     {day.enabled && (
                       <div className="flex items-center gap-3">
                         <Clock3 className="h-5 w-5 text-violet-400 shrink-0" />
@@ -172,7 +171,7 @@ export default function ProAvailabilityPage() {
                           onChange={(e) => updateDay(key, "start", e.target.value)}
                           className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-lg font-medium text-slate-700 outline-none focus:border-violet-500"
                         />
-                        <span className="text-slate-400 font-medium">to</span>
+                        <span className="text-slate-400 font-medium">{t("time_to")}</span>
                         <input
                           type="time"
                           value={day.end}
@@ -183,7 +182,7 @@ export default function ProAvailabilityPage() {
                     )}
 
                     {!day.enabled && (
-                      <span className="text-lg font-medium text-slate-400">Closed</span>
+                      <span className="text-lg font-medium text-slate-400">{t("closed")}</span>
                     )}
                   </div>
                 </div>
@@ -203,11 +202,11 @@ export default function ProAvailabilityPage() {
             className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] bg-violet-600 px-8 py-4 text-lg font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
           >
             <Save className="h-5 w-5" />
-            {saving ? "Saving…" : "Save Availability"}
+            {saving ? t("saving") : t("save_availability")}
           </button>
           <Link href="/pro/profile"
             className="inline-flex items-center justify-center rounded-[1.2rem] border border-gray-200 bg-white px-8 py-4 text-lg font-semibold text-slate-700 transition hover:bg-gray-50">
-            Cancel
+            {t("cancel")}
           </Link>
         </div>
 
@@ -218,8 +217,8 @@ export default function ProAvailabilityPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Availability Saved!</h3>
-                <p className="mt-1 text-slate-600">Customers can now see your weekly schedule.</p>
+                <h3 className="text-xl font-bold text-slate-900">{t("availability_saved")}</h3>
+                <p className="mt-1 text-slate-600">{t("availability_saved_desc")}</p>
               </div>
             </div>
           </div>

@@ -8,33 +8,34 @@ import { subscribeMessages, sendMessage } from "@/lib/firestore";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Message, Conversation } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
+import { useMessageTranslation } from "@/lib/useMessageTranslation";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default function ChatPage({ params }: Props) {
   const { id: conversationId } = use(params);
   const { user, userProfile } = useAuth();
+  const { t, locale } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { translations, isRevealed, toggleOriginal } = useMessageTranslation(messages, locale);
 
-  // Load conversation metadata (for the other person's name)
   useEffect(() => {
     getDoc(doc(db, "conversations", conversationId)).then((snap) => {
       if (snap.exists()) setConversation({ id: snap.id, ...snap.data() } as Conversation);
     });
   }, [conversationId]);
 
-  // Subscribe to messages
   useEffect(() => {
     const unsub = subscribeMessages(conversationId, setMessages);
     return unsub;
   }, [conversationId]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -75,12 +76,11 @@ export default function ChatPage({ params }: Props) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return "Today";
-    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    if (d.toDateString() === today.toDateString()) return t("today");
+    if (d.toDateString() === yesterday.toDateString()) return t("yesterday");
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Group messages by date
   const grouped: { date: string; messages: Message[] }[] = [];
   for (const msg of messages) {
     const date = formatDate(msg.createdAt);
@@ -94,7 +94,6 @@ export default function ChatPage({ params }: Props) {
 
   return (
     <div className="flex flex-col h-screen bg-[#f8f8fb]">
-      {/* Header */}
       <header className="border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-4 flex items-center gap-4 sticky top-0 z-10">
         <Link href="/messages" className="text-gray-600 hover:text-gray-900 shrink-0">
           <ArrowLeft className="h-8 w-8" />
@@ -104,14 +103,13 @@ export default function ChatPage({ params }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 truncate">{otherName}</h1>
-          <p className="text-base text-green-500 font-medium">Online</p>
+          <p className="text-base text-green-500 font-medium">{t("online")}</p>
         </div>
         <Link href={`tel:${userProfile?.phone ?? ""}`} className="text-gray-500 hover:text-violet-600 transition">
           <Phone className="h-7 w-7" />
         </Link>
       </header>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
@@ -119,13 +117,12 @@ export default function ChatPage({ params }: Props) {
               {otherName[0] ?? "?"}
             </div>
             <p className="text-2xl font-bold text-slate-900">{otherName}</p>
-            <p className="text-lg text-slate-400">No messages yet. Say hello!</p>
+            <p className="text-lg text-slate-400">{t("no_msg_say_hello")}</p>
           </div>
         )}
 
         {grouped.map(({ date, messages: msgs }) => (
           <div key={date}>
-            {/* Date separator */}
             <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-gray-200" />
               <span className="text-sm font-medium text-slate-400 px-2">{date}</span>
@@ -139,7 +136,6 @@ export default function ChatPage({ params }: Props) {
 
               return (
                 <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} ${isSameAuthor ? "mt-1" : "mt-3"}`}>
-                  {/* Other person avatar — only show on first message in a group */}
                   {!isMe && !isSameAuthor && (
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 text-white text-base font-bold mr-2 mt-auto shrink-0">
                       {otherName[0]}
@@ -153,8 +149,21 @@ export default function ChatPage({ params }: Props) {
                         ? "bg-violet-600 text-white rounded-br-sm"
                         : "bg-white text-slate-900 border border-gray-200 rounded-bl-sm"
                     }`}>
-                      <p className="text-lg leading-relaxed">{msg.text}</p>
+                      <p className="text-lg leading-relaxed">
+                        {translations[msg.id] && !isRevealed(msg.id) ? translations[msg.id].translatedText : msg.text}
+                      </p>
                     </div>
+                    {translations[msg.id] && (
+                      <button
+                        type="button"
+                        onClick={() => toggleOriginal(msg.id)}
+                        className={`mt-1 text-xs px-1 underline underline-offset-2 ${isMe ? "text-slate-400 text-right" : "text-slate-400"}`}
+                      >
+                        {isRevealed(msg.id)
+                          ? t("show_translation")
+                          : `${t("translated_from")} ${translations[msg.id].sourceLanguage}`}
+                      </button>
+                    )}
                     <p className={`mt-1 text-xs px-1 ${isMe ? "text-slate-400 text-right" : "text-slate-400"}`}>
                       {formatTime(msg.createdAt)}
                     </p>
@@ -167,7 +176,6 @@ export default function ChatPage({ params }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <form onSubmit={handleSend} className="border-t border-gray-200 bg-white px-4 py-4 flex gap-3 items-center">
         <input
           ref={inputRef}
@@ -175,7 +183,8 @@ export default function ChatPage({ params }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message…"
+          placeholder={t("type_message_ph")}
+          dir="auto"
           className="flex-1 rounded-[1.5rem] border border-gray-200 bg-gray-50 px-5 py-4 text-lg text-slate-700 outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition"
           autoComplete="off"
         />

@@ -3,18 +3,25 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Clock3, Shield, MessageSquare, CalendarDays, CheckCircle2, Briefcase, Heart } from "lucide-react";
 import { WeeklyAvailability } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification, subscribeProBookings } from "@/lib/firestore";
+import { getUserProfile, createBooking, getOrCreateConversation, getReviewsForPro, createNotification, subscribeProBookings, addFavorite, removeFavorite } from "@/lib/firestore";
 import { UserProfile, Review, Booking } from "@/lib/types";
 import BookingModal from "@/components/shared/BookingModal";
+import { useLanguage } from "@/lib/language-context";
 
 type Props = { params: Promise<{ id: string }> };
 
+const DAY_KEYS: Record<string, string> = {
+  sunday: "day_sunday", monday: "day_monday", tuesday: "day_tuesday",
+  wednesday: "day_wednesday", thursday: "day_thursday", friday: "day_friday", saturday: "day_saturday",
+};
+
 export default function ProfessionalDetailPage({ params }: Props) {
   const { id } = use(params);
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
 
   const [pro, setPro] = useState<UserProfile | null>(null);
@@ -23,11 +30,27 @@ export default function ProfessionalDetailPage({ params }: Props) {
   const [booked, setBooked] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [proBookings, setProBookings] = useState<Booking[]>([]);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
-    getUserProfile(id)
-      .then(setPro)
-      .finally(() => setLoading(false));
+    setIsFavorite(!!userProfile?.favoriteIds?.includes(id));
+  }, [userProfile, id]);
+
+  const handleToggleFavorite = async () => {
+    if (!user) return;
+    const next = !isFavorite;
+    setIsFavorite(next);
+    try {
+      if (next) await addFavorite(user.uid, id);
+      else await removeFavorite(user.uid, id);
+      await refreshProfile();
+    } catch {
+      setIsFavorite(!next);
+    }
+  };
+
+  useEffect(() => {
+    getUserProfile(id).then(setPro).finally(() => setLoading(false));
     getReviewsForPro(id).then(setReviews);
     const unsub = subscribeProBookings(id, setProBookings);
     return () => unsub();
@@ -42,8 +65,6 @@ export default function ProfessionalDetailPage({ params }: Props) {
 
   const handleBook = async (data: { service: string; scheduledAt: Date; location: string; notes: string; durationHours: number }) => {
     if (!user || !userProfile || !pro) return;
-
-    // Overlap check: new booking [newStart, newEnd) vs each existing booking
     const conflict = proBookings.some((b) => {
       if (b.status === "cancelled") return false;
       const ts = b.scheduledAt as { seconds?: number; toDate?: () => Date };
@@ -86,10 +107,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
 
   const handleMessage = async () => {
     if (!user || !userProfile || !pro) return;
-    const convId = await getOrCreateConversation(
-      user.uid, pro.uid,
-      userProfile.displayName, pro.displayName
-    );
+    const convId = await getOrCreateConversation(user.uid, pro.uid, userProfile.displayName, pro.displayName);
     router.push(`/messages/${convId}`);
   };
 
@@ -104,26 +122,30 @@ export default function ProfessionalDetailPage({ params }: Props) {
   if (!pro) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f8fb] gap-4">
-        <p className="text-2xl font-semibold text-slate-600">Professional not found.</p>
-        <Link href="/search" className="text-violet-600 font-bold hover:underline">Back to Search</Link>
+        <p className="text-2xl font-semibold text-slate-600">{t("pro_not_found")}</p>
+        <Link href="/search" className="text-violet-600 font-bold hover:underline">{t("back_to_search")}</Link>
       </div>
     );
   }
 
   return (
     <main className="min-h-screen bg-[#f8f8fb] pb-28">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <Link href="/search" className="text-gray-600 transition hover:text-gray-900">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-          <div className="w-8" />
+          <h1 className="text-3xl font-bold text-slate-900">{t("profile")}</h1>
+          <button
+            onClick={handleToggleFavorite}
+            aria-label={t("favorite_providers")}
+            className="text-gray-400 transition hover:text-red-500"
+          >
+            <Heart className={`h-8 w-8 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+          </button>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 px-5 pb-10 pt-8 text-white">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center gap-8">
           <div className="relative">
@@ -146,7 +168,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
               {proData.rating && (
                 <span className="flex items-center gap-2">
                   <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />
-                  {proData.rating.toFixed(1)} ({proData.reviewCount ?? 0} reviews)
+                  {proData.rating.toFixed(1)} ({proData.reviewCount ?? 0} {t("reviews")})
                 </span>
               )}
               {proData.location && (
@@ -154,7 +176,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
               )}
               <span className="flex items-center gap-2">
                 <Clock3 className="h-5 w-5" />
-                {proData.isAvailable ? "Available now" : "Unavailable"}
+                {proData.isAvailable ? t("available_now") : t("unavailable")}
               </span>
             </div>
           </div>
@@ -165,18 +187,18 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { icon: Star, label: "Rating", value: proData.rating?.toFixed(1) ?? "New", color: "text-amber-500 bg-amber-50" },
-            { icon: Briefcase, label: "Jobs Done", value: proData.jobCount ?? 0, color: "text-violet-600 bg-violet-50" },
-            { icon: CheckCircle2, label: "Reviews", value: proData.reviewCount ?? 0, color: "text-emerald-600 bg-emerald-50" },
+            { icon: Star,         labelKey: "rating_label",    value: proData.rating?.toFixed(1) ?? "New", color: "text-amber-500 bg-amber-50" },
+            { icon: Briefcase,    labelKey: "jobs_done_label",  value: proData.jobCount ?? 0,              color: "text-violet-600 bg-violet-50" },
+            { icon: CheckCircle2, labelKey: "reviews",          value: proData.reviewCount ?? 0,           color: "text-emerald-600 bg-emerald-50" },
           ].map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="rounded-[1.5rem] border border-gray-200 bg-white p-5 text-center shadow-sm">
+              <div key={s.labelKey} className="rounded-[1.5rem] border border-gray-200 bg-white p-5 text-center shadow-sm">
                 <div className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl ${s.color}`}>
                   <Icon className="h-7 w-7" />
                 </div>
                 <div className="text-3xl font-extrabold text-slate-900">{s.value}</div>
-                <div className="mt-1 text-lg text-slate-500">{s.label}</div>
+                <div className="mt-1 text-lg text-slate-500">{t(s.labelKey)}</div>
               </div>
             );
           })}
@@ -185,7 +207,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {/* Bio */}
         {proData.bio && (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="text-2xl font-bold text-slate-900 mb-3">About</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">{t("about")}</h3>
             <p className="text-xl text-slate-600 leading-relaxed">{proData.bio}</p>
           </div>
         )}
@@ -193,7 +215,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {/* Services */}
         {proData.services && proData.services.length > 0 && (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">Services</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("services")}</h3>
             <div className="flex flex-wrap gap-3">
               {proData.services.map((s) => (
                 <span key={s} className="rounded-full border border-violet-200 bg-violet-50 px-5 py-2 text-lg font-medium text-violet-700">{s}</span>
@@ -206,7 +228,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {proData.availability && (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-1 flex items-center gap-2 text-2xl font-bold text-slate-900">
-              <CalendarDays className="h-6 w-6 text-violet-600" /> Weekly Availability
+              <CalendarDays className="h-6 w-6 text-violet-600" /> {t("weekly_availability")}
             </h3>
             {proData.serviceArea && (
               <p className="mb-4 flex items-center gap-2 text-lg text-slate-500">
@@ -216,13 +238,12 @@ export default function ProfessionalDetailPage({ params }: Props) {
             <div className="mt-4 space-y-2">
               {(["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as const).map((day) => {
                 const slot = proData.availability![day];
-                const label = day.charAt(0).toUpperCase() + day.slice(1);
                 return (
                   <div key={day} className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
                     slot.enabled ? "bg-violet-50 border border-violet-100" : "bg-gray-50 border border-gray-100"
                   }`}>
-                    <span className={`text-lg font-semibold w-32 ${slot.enabled ? "text-violet-700" : "text-slate-400"}`}>
-                      {label}
+                    <span className={`text-lg font-semibold w-36 ${slot.enabled ? "text-violet-700" : "text-slate-400"}`}>
+                      {t(DAY_KEYS[day])}
                     </span>
                     {slot.enabled ? (
                       <span className="flex items-center gap-2 text-lg text-slate-700 font-medium">
@@ -230,7 +251,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
                         {slot.start} – {slot.end}
                       </span>
                     ) : (
-                      <span className="text-lg text-slate-400 font-medium">Closed</span>
+                      <span className="text-lg text-slate-400 font-medium">{t("closed")}</span>
                     )}
                   </div>
                 );
@@ -256,12 +277,12 @@ export default function ProfessionalDetailPage({ params }: Props) {
               label,
               count: reviews.filter((r) => words.some((w) => r.comment.toLowerCase().includes(w))).length,
             }))
-            .filter((t) => t.count > 0)
+            .filter((tg) => tg.count > 0)
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
           if (tags.length === 0) return null;
           const rating = proData.rating ?? 0;
-          const top = tags.slice(0, 2).map((t) => t.label.toLowerCase());
+          const top = tags.slice(0, 2).map((tg) => tg.label.toLowerCase());
           const summary = rating >= 4.5
             ? `Customers love their ${top.join(" and ")}.`
             : rating >= 3.5
@@ -269,13 +290,13 @@ export default function ProfessionalDetailPage({ params }: Props) {
             : "Mixed reviews — check details below.";
           return (
             <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="text-2xl font-bold text-slate-900 mb-1">What Customers Say</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-1">{t("what_customers_say")}</h3>
               <p className="text-lg text-slate-500 mb-4">{summary}</p>
               <div className="flex flex-wrap gap-2">
-                {tags.map((t) => (
-                  <span key={t.label} className="flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-base font-semibold text-violet-700">
-                    {t.label}
-                    <span className="rounded-full bg-violet-200 px-2 py-0.5 text-xs font-bold text-violet-900">{t.count}</span>
+                {tags.map((tg) => (
+                  <span key={tg.label} className="flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-base font-semibold text-violet-700">
+                    {tg.label}
+                    <span className="rounded-full bg-violet-200 px-2 py-0.5 text-xs font-bold text-violet-900">{tg.count}</span>
                   </span>
                 ))}
               </div>
@@ -286,7 +307,7 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {/* Reviews */}
         {reviews.length > 0 && (
           <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="text-2xl font-bold text-slate-900 mb-5">Reviews</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-5">{t("reviews")}</h3>
             <div className="space-y-4">
               {reviews.map((r) => (
                 <div key={r.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
@@ -294,26 +315,17 @@ export default function ProfessionalDetailPage({ params }: Props) {
                     <p className="text-lg font-semibold text-slate-800">{r.reviewerName}</p>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-5 w-5 ${star <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
-                        />
+                        <Star key={star} className={`h-5 w-5 ${star <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
                       ))}
                     </div>
                   </div>
-                  {r.comment && (
-                    <p className="mt-2 text-lg text-slate-600 leading-relaxed">{r.comment}</p>
-                  )}
+                  {r.comment && <p className="mt-2 text-lg text-slate-600 leading-relaxed">{r.comment}</p>}
                   {r.images && r.images.length > 0 && (
                     <div className="mt-3 flex gap-2 flex-wrap">
                       {r.images.map((url, i) => (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`Review photo ${i + 1}`}
-                            className="h-24 w-24 rounded-2xl object-cover border border-gray-200 transition hover:opacity-90"
-                          />
+                          <img src={url} alt={`Review photo ${i + 1}`} className="h-24 w-24 rounded-2xl object-cover border border-gray-200 transition hover:opacity-90" />
                         </a>
                       ))}
                     </div>
@@ -328,8 +340,8 @@ export default function ProfessionalDetailPage({ params }: Props) {
         {booked && (
           <div className="rounded-[2rem] border border-green-200 bg-green-50 p-6 text-center shadow-sm">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-3" />
-            <p className="text-2xl font-bold text-green-800">Booking Request Sent!</p>
-            <p className="mt-2 text-lg text-green-700">{pro.displayName} will respond shortly.</p>
+            <p className="text-2xl font-bold text-green-800">{t("booking_sent")}</p>
+            <p className="mt-2 text-lg text-green-700">{pro.displayName} {t("will_respond_shortly")}</p>
           </div>
         )}
 
@@ -340,14 +352,14 @@ export default function ProfessionalDetailPage({ params }: Props) {
               onClick={handleMessage}
               className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] border border-gray-200 bg-white px-6 py-5 text-xl font-semibold text-slate-700 shadow-sm transition hover:bg-gray-50"
             >
-              <MessageSquare className="h-6 w-6" />Message
+              <MessageSquare className="h-6 w-6" />{t("message_btn")}
             </button>
             <button
               onClick={() => setShowBooking(true)}
               className="flex flex-1 items-center justify-center gap-3 rounded-[1.5rem] bg-violet-600 px-6 py-5 text-xl font-bold text-white shadow-lg transition hover:bg-violet-700"
             >
               <CalendarDays className="h-6 w-6" />
-              {`Book · $${proData.hourlyRate ?? "—"}/hr`}
+              {t("book_service")} · ${proData.hourlyRate ?? "—"}{t("hr")}
             </button>
           </div>
         )}

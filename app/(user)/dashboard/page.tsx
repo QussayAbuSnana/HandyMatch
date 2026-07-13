@@ -18,10 +18,10 @@ import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { useLanguage } from "@/lib/language-context";
 
 const categories = [
-  { nameKey: "plumbing",   description: "Leaks, installations, repairs",    icon: Droplets,   gradient: "from-violet-500 to-purple-500", query: "plumbing" },
-  { nameKey: "electrical", description: "Wiring, fixtures, repairs",         icon: Zap,        gradient: "from-orange-400 to-orange-600", query: "electrical" },
-  { nameKey: "carpentry",  description: "Furniture, repairs, installation",  icon: Hammer,     gradient: "from-orange-500 to-red-500",    query: "carpentry" },
-  { nameKey: "painting",   description: "Interior, exterior, touch-ups",    icon: Paintbrush, gradient: "from-sky-500 to-cyan-500",      query: "painting" },
+  { nameKey: "plumbing",   descKey: "plumbing_desc",   icon: Droplets,   gradient: "from-violet-500 to-purple-500", query: "plumbing" },
+  { nameKey: "electrical", descKey: "electrical_desc", icon: Zap,        gradient: "from-orange-400 to-orange-600", query: "electrical" },
+  { nameKey: "carpentry",  descKey: "carpentry_desc",  icon: Hammer,     gradient: "from-orange-500 to-red-500",    query: "carpentry" },
+  { nameKey: "painting",   descKey: "painting_desc",   icon: Paintbrush, gradient: "from-sky-500 to-cyan-500",      query: "painting" },
 ];
 
 const benefits = [
@@ -164,7 +164,7 @@ export default function CustomerDashboardPage() {
                   {t(category.nameKey)}
                 </h3>
                 <p className="mt-3 text-center text-lg text-slate-500">
-                  {category.description}
+                  {t(category.descKey)}
                 </p>
               </Link>
             );

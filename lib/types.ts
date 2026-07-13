@@ -38,6 +38,7 @@ export interface UserProfile {
   availability?: WeeklyAvailability;
   serviceArea?: string;
   settings?: UserSettings;
+  favoriteIds?: string[];
   createdAt: Timestamp;
 }
 

@@ -6,6 +6,7 @@ import {
   ArrowLeft, Sparkles, Loader2, DollarSign, Clock3,
   CheckCircle2, Lightbulb, HelpCircle, CalendarDays, SendHorizonal,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 interface QuestionMsg {
   type: "question";
@@ -30,12 +31,6 @@ type ChatMessage =
   | { role: "ai-question"; data: QuestionMsg }
   | { role: "ai-estimate"; data: EstimateMsg };
 
-const COMPLEXITY_STYLE = {
-  simple:   { label: "Simple Job",   color: "bg-green-100 text-green-700" },
-  moderate: { label: "Moderate Job", color: "bg-amber-100 text-amber-700" },
-  complex:  { label: "Complex Job",  color: "bg-red-100 text-red-700" },
-};
-
 const EXAMPLES = [
   "My kitchen tap is dripping",
   "I need to repaint my living room",
@@ -45,6 +40,7 @@ const EXAMPLES = [
 ];
 
 export default function EstimatePage() {
+  const { t } = useLanguage();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [answers, setAnswers] = useState<{ question: string; answer: string }[]>([]);
@@ -59,6 +55,12 @@ export default function EstimatePage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const complexityStyle = {
+    simple:   { label: t("simple_job"),   color: "bg-green-100 text-green-700" },
+    moderate: { label: t("moderate_job"), color: "bg-amber-100 text-amber-700" },
+    complex:  { label: t("complex_job"),  color: "bg-red-100 text-red-700" },
+  };
+
   const sendToAI = async (desc: string, currentAnswers: { question: string; answer: string }[]) => {
     setLoading(true);
     setError("");
@@ -69,7 +71,7 @@ export default function EstimatePage() {
         body: JSON.stringify({ description: desc, answers: currentAnswers }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data?.error ?? "Something went wrong."); return; }
+      if (!res.ok) { setError(data?.error ?? t("ai_error")); return; }
 
       if (data.type === "question") {
         setMessages((prev) => [...prev, { role: "ai-question", data }]);
@@ -77,7 +79,7 @@ export default function EstimatePage() {
         setMessages((prev) => [...prev, { role: "ai-estimate", data }]);
       }
     } catch {
-      setError("Could not reach the AI. Please try again.");
+      setError(t("ai_error"));
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export default function EstimatePage() {
 
   const handleStart = async (text?: string) => {
     const desc = (text ?? input).trim();
-    if (desc.length < 5) { setError("Please describe the job in a bit more detail."); return; }
+    if (desc.length < 5) { setError(t("describe_detail")); return; }
     setError("");
     setMessages([{ role: "user", text: desc }]);
     setAnswers([]);
@@ -98,7 +100,6 @@ export default function EstimatePage() {
   const handleAnswer = async (questionText: string, answer: string, msgIndex: number) => {
     if (answeredIndexes.has(msgIndex)) return;
     setAnsweredIndexes((prev) => new Set(prev).add(msgIndex));
-
     const newAnswers = [...answers, { question: questionText, answer }];
     setAnswers(newAnswers);
     setMessages((prev) => [...prev, { role: "user", text: answer }]);
@@ -127,13 +128,11 @@ export default function EstimatePage() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
-              <Sparkles className="h-4 w-4 text-yellow-300" /> AI Estimator
+              <Sparkles className="h-4 w-4 text-yellow-300" /> {t("ai_estimator")}
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold">Price Estimator</h1>
-          <p className="mt-1 text-base text-white/85">
-            Describe your job — AI will ask a couple of questions then give you a cost estimate.
-          </p>
+          <h1 className="text-3xl font-extrabold">{t("price_estimator")}</h1>
+          <p className="mt-1 text-base text-white/85">{t("estimator_desc")}</p>
         </div>
       </section>
 
@@ -143,7 +142,7 @@ export default function EstimatePage() {
         {/* Examples — only before first message */}
         {messages.length === 0 && (
           <div>
-            <p className="mb-3 text-base font-semibold text-slate-400">Try an example:</p>
+            <p className="mb-3 text-base font-semibold text-slate-400">{t("try_example")}</p>
             <div className="flex flex-col gap-2">
               {EXAMPLES.map((ex) => (
                 <button
@@ -175,7 +174,6 @@ export default function EstimatePage() {
             const answered = answeredIndexes.has(i);
             return (
               <div key={i} className="flex flex-col gap-3">
-                {/* AI bubble */}
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow">
                     <Sparkles className="h-4 w-4 text-white" />
@@ -184,9 +182,8 @@ export default function EstimatePage() {
                     {q.question}
                   </div>
                 </div>
-                {/* Answer buttons */}
                 <div className="ml-12 flex flex-wrap gap-2">
-                  {q.options.map((opt) => (
+                  {(q.options ?? []).map((opt) => (
                     <button
                       key={opt}
                       disabled={answered || loading}
@@ -207,7 +204,7 @@ export default function EstimatePage() {
 
           if (msg.role === "ai-estimate") {
             const est = msg.data;
-            const complexity = COMPLEXITY_STYLE[est.complexity] ?? COMPLEXITY_STYLE.moderate;
+            const complexity = complexityStyle[est.complexity] ?? complexityStyle.moderate;
             return (
               <div key={i} className="flex flex-col gap-4 mt-2">
                 {/* AI intro bubble */}
@@ -216,7 +213,7 @@ export default function EstimatePage() {
                     <Sparkles className="h-4 w-4 text-white" />
                   </div>
                   <div className="rounded-3xl rounded-tl-md bg-white px-5 py-3 text-base text-slate-800 shadow-sm border border-gray-100">
-                    Here&apos;s your estimate 👇
+                    {t("heres_estimate")}
                   </div>
                 </div>
 
@@ -240,22 +237,22 @@ export default function EstimatePage() {
                         <DollarSign className="h-5 w-5 text-emerald-600" />
                       </div>
                       <div className="text-2xl font-extrabold text-slate-900">${est.priceRange.min}–${est.priceRange.max}</div>
-                      <div className="text-sm text-slate-500">Estimated Cost</div>
+                      <div className="text-sm text-slate-500">{t("estimated_cost")}</div>
                     </div>
                     <div className="rounded-[1.5rem] border border-gray-200 bg-white p-4 text-center shadow-sm">
                       <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
                         <Clock3 className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="text-2xl font-extrabold text-slate-900">{est.estimatedHours}h</div>
-                      <div className="text-sm text-slate-500">Estimated Time</div>
+                      <div className="text-sm text-slate-500">{t("estimated_time")}</div>
                     </div>
                   </div>
 
                   {/* Breakdown */}
                   <div className="rounded-[1.5rem] border border-gray-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-3 text-lg font-bold text-slate-900">Cost Breakdown</h3>
+                    <h3 className="mb-3 text-lg font-bold text-slate-900">{t("cost_breakdown")}</h3>
                     <div className="space-y-2">
-                      {est.breakdown.map((item, j) => (
+                      {(est.breakdown ?? []).map((item, j) => (
                         <div key={j} className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
                           <span className="text-sm text-slate-700">{item.item}</span>
                           <span className="text-sm font-bold text-violet-600">{item.amount}</span>
@@ -267,10 +264,10 @@ export default function EstimatePage() {
                   {/* Tips */}
                   <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
                     <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-900">
-                      <Lightbulb className="h-5 w-5 text-amber-500" /> Tips
+                      <Lightbulb className="h-5 w-5 text-amber-500" /> {t("tips_heading")}
                     </h3>
                     <div className="space-y-2">
-                      {est.tips.map((tip, j) => (
+                      {(est.tips ?? []).map((tip, j) => (
                         <div key={j} className="flex items-start gap-2">
                           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                           <p className="text-sm text-slate-700">{tip}</p>
@@ -282,10 +279,10 @@ export default function EstimatePage() {
                   {/* Ask the pro */}
                   <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-5 shadow-sm">
                     <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-900">
-                      <HelpCircle className="h-5 w-5 text-blue-500" /> Ask the Pro
+                      <HelpCircle className="h-5 w-5 text-blue-500" /> {t("ask_the_pro")}
                     </h3>
                     <div className="space-y-2">
-                      {est.questionsToAsk.map((q, j) => (
+                      {(est.questionsToAsk ?? []).map((q, j) => (
                         <div key={j} className="flex items-start gap-2">
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 text-xs font-bold text-blue-700">{j + 1}</span>
                           <p className="text-sm text-slate-700">{q}</p>
@@ -297,7 +294,7 @@ export default function EstimatePage() {
                   {/* CTA */}
                   <div className="rounded-[1.5rem] border border-violet-200 bg-violet-50 p-4">
                     <p className="mb-3 text-sm font-semibold text-violet-700">
-                      Ready to fix it? Book a {est.category} professional now.
+                      {t("ready_book")} {est.category} {t("professional_now")}
                     </p>
                     <Link
                       href={`/search?service=${encodeURIComponent(est.category)}`}
@@ -310,7 +307,7 @@ export default function EstimatePage() {
                       className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-4 text-base font-bold text-white shadow-lg transition hover:opacity-95"
                     >
                       <CalendarDays className="h-5 w-5" />
-                      Book a {est.category} Pro
+                      {t("book_a_pro")} {est.category} Pro
                     </Link>
                   </div>
 
@@ -318,7 +315,7 @@ export default function EstimatePage() {
                     onClick={handleReset}
                     className="w-full rounded-[1.5rem] border border-gray-200 bg-white py-4 text-base font-semibold text-slate-600 transition hover:bg-gray-50"
                   >
-                    Estimate a different job
+                    {t("estimate_diff_job")}
                   </button>
                 </div>
               </div>
@@ -339,13 +336,24 @@ export default function EstimatePage() {
         )}
 
         {error && (
-          <p className="rounded-2xl bg-red-50 px-5 py-3 text-sm text-red-600">{error}</p>
+          <div className="flex flex-col items-start gap-3 rounded-2xl bg-red-50 px-5 py-4">
+            <p className="text-sm text-red-600">{error}</p>
+            {messages.length > 0 && (
+              <button
+                onClick={() => sendToAI(description, answers)}
+                disabled={loading}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {t("try_again")}
+              </button>
+            )}
+          </div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input bar — only shown before chat starts or after reset */}
+      {/* Input bar */}
       {!hasEstimate && messages.length === 0 && (
         <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white/95 px-4 py-4 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center gap-3">
@@ -354,7 +362,7 @@ export default function EstimatePage() {
               value={input}
               onChange={(e) => { setInput(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && handleStart()}
-              placeholder="Describe your problem…"
+              placeholder={t("describe_problem_placeholder")}
               className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-base text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
             <button

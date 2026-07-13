@@ -4,14 +4,19 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
   onSnapshot,
   serverTimestamp,
+  runTransaction,
   Unsubscribe,
   limit,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Booking, Conversation, Message, Notification, Review, UserProfile } from "./types";
@@ -28,6 +33,16 @@ export async function updateUserProfile(
   data: Partial<UserProfile>
 ): Promise<void> {
   await updateDoc(doc(db, "users", uid), data);
+}
+
+/** Add a professional to a customer's favorites */
+export async function addFavorite(uid: string, proId: string): Promise<void> {
+  await updateDoc(doc(db, "users", uid), { favoriteIds: arrayUnion(proId) });
+}
+
+/** Remove a professional from a customer's favorites */
+export async function removeFavorite(uid: string, proId: string): Promise<void> {
+  await updateDoc(doc(db, "users", uid), { favoriteIds: arrayRemove(proId) });
 }
 
 /** Fetch all professionals (for search page) */
@@ -51,15 +66,52 @@ export async function getProfessionals(
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
 
+/** Every whole hour a booking's [scheduledAt, scheduledAt + durationHours) window touches. */
+function hourBucketsForBooking(scheduledAt: Date, durationHours: number): number[] {
+  const startHour = Math.floor(scheduledAt.getTime() / 3_600_000);
+  const endHour = Math.ceil((scheduledAt.getTime() + durationHours * 3_600_000) / 3_600_000);
+  const buckets: number[] = [];
+  for (let h = startHour; h < endHour; h++) buckets.push(h);
+  return buckets;
+}
+
+function slotRef(professionalId: string, hourBucket: number) {
+  return doc(db, "bookingSlots", `${professionalId}_${hourBucket}`);
+}
+
+/**
+ * Atomically checks that no existing (non-cancelled) booking overlaps this time slot for
+ * this professional, and creates the booking — as one Firestore transaction. This closes
+ * the race where two customers submit a request for the same slot at nearly the same moment:
+ * whichever transaction commits first wins the slot; the second sees the lock and is rejected.
+ */
 export async function createBooking(
   data: Omit<Booking, "id" | "createdAt">
 ): Promise<string> {
-  const ref = await addDoc(collection(db, "bookings"), {
-    ...data,
-    status: "pending",
-    createdAt: serverTimestamp(),
+  const scheduledAt = data.scheduledAt as unknown as Date;
+  const buckets = hourBucketsForBooking(scheduledAt, data.durationHours ?? 1);
+  const slotRefs = buckets.map((h) => slotRef(data.professionalId, h));
+  const bookingRef = doc(collection(db, "bookings"));
+
+  await runTransaction(db, async (transaction) => {
+    const snaps = await Promise.all(slotRefs.map((ref) => transaction.get(ref)));
+    if (snaps.some((s) => s.exists())) {
+      throw new Error("This slot was just booked. Please pick another time.");
+    }
+    transaction.set(bookingRef, { ...data, status: "pending", createdAt: serverTimestamp() });
+    slotRefs.forEach((ref) => transaction.set(ref, { bookingId: bookingRef.id }));
   });
-  return ref.id;
+
+  return bookingRef.id;
+}
+
+/** Frees up the hour-slot locks held by a booking — call when it's cancelled/declined. */
+export async function releaseBookingSlots(booking: Booking): Promise<void> {
+  const ts = booking.scheduledAt as unknown as { seconds?: number; toDate?: () => Date };
+  const scheduledAt = typeof ts?.toDate === "function" ? ts.toDate() : ts?.seconds ? new Date(ts.seconds * 1000) : null;
+  if (!scheduledAt) return;
+  const buckets = hourBucketsForBooking(scheduledAt, booking.durationHours ?? 1);
+  await Promise.all(buckets.map((h) => deleteDoc(slotRef(booking.professionalId, h)).catch(() => {})));
 }
 
 export async function updateBookingStatus(
@@ -240,8 +292,9 @@ export async function sendMessage(
 export async function submitReview(
   review: Omit<Review, "id" | "createdAt">
 ): Promise<void> {
-  // Save the review
-  await addDoc(collection(db, "reviews"), {
+  // Deterministic id (bookingId_reviewerId): lets Firestore rules reject a second
+  // submission for the same booking+reviewer as a denied `update` rather than a `create`.
+  await setDoc(doc(db, "reviews", `${review.bookingId}_${review.reviewerId}`), {
     ...review,
     createdAt: serverTimestamp(),
   });
@@ -287,13 +340,8 @@ export async function hasReviewed(
   bookingId: string,
   reviewerId: string
 ): Promise<boolean> {
-  const q = query(
-    collection(db, "reviews"),
-    where("bookingId", "==", bookingId),
-    where("reviewerId", "==", reviewerId)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
+  const snap = await getDoc(doc(db, "reviews", `${bookingId}_${reviewerId}`));
+  return snap.exists();
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────

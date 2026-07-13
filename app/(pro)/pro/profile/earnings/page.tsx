@@ -9,9 +9,11 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { getProBookings } from "@/lib/firestore";
 import { Booking } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
 export default function ProEarningsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,10 +27,8 @@ export default function ProEarningsPage() {
   const completed = bookings.filter((b) => b.status === "completed");
   const pending   = bookings.filter((b) => b.status === "accepted" || b.status === "in_progress");
 
-  // Total earned from completed jobs
   const totalEarned = completed.reduce((sum, b) => sum + (b.price ?? 0), 0);
 
-  // This month's earnings
   const now = new Date();
   const thisMonthEarned = completed
     .filter((b) => {
@@ -38,7 +38,6 @@ export default function ProEarningsPage() {
     })
     .reduce((sum, b) => sum + (b.price ?? 0), 0);
 
-  // Pending payout = accepted/in-progress jobs
   const pendingPayout = pending.reduce((sum, b) => sum + (b.price ?? 0), 0);
 
   const formatDate = (b: Booking) => {
@@ -48,10 +47,10 @@ export default function ProEarningsPage() {
   };
 
   const summaryCards = [
-    { title: "This Month",      value: `$${thisMonthEarned}`,  icon: Wallet,       gradient: "from-emerald-500 to-green-600" },
-    { title: "Completed Jobs",  value: completed.length,        icon: CheckCircle2, gradient: "from-violet-500 to-fuchsia-500" },
-    { title: "Pending Payout",  value: `$${pendingPayout}`,    icon: Clock3,       gradient: "from-amber-400 to-orange-500" },
-    { title: "Total Earned",    value: `$${totalEarned}`,      icon: TrendingUp,   gradient: "from-blue-500 to-cyan-500" },
+    { titleKey: "this_month",         value: `$${thisMonthEarned}`,  icon: Wallet,       gradient: "from-emerald-500 to-green-600" },
+    { titleKey: "completed_jobs_label", value: completed.length,      icon: CheckCircle2, gradient: "from-violet-500 to-fuchsia-500" },
+    { titleKey: "pending_payout",     value: `$${pendingPayout}`,    icon: Clock3,       gradient: "from-amber-400 to-orange-500" },
+    { titleKey: "total_earned",       value: `$${totalEarned}`,      icon: TrendingUp,   gradient: "from-blue-500 to-cyan-500" },
   ];
 
   return (
@@ -63,11 +62,11 @@ export default function ProEarningsPage() {
               className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-md transition hover:bg-white">
               <ArrowLeft className="h-6 w-6" />
             </Link>
-            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">Earnings</div>
+            <div className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">{t("earnings_label")}</div>
           </div>
-          <p className="text-lg text-white/85">Professional performance</p>
-          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">Track Your Earnings</h1>
-          <p className="mt-3 text-lg text-white/85">Monitor completed jobs, monthly income, and pending payouts.</p>
+          <p className="text-lg text-white/85">{t("pro_performance")}</p>
+          <h1 className="mt-2 text-4xl font-extrabold md:text-5xl">{t("track_earnings")}</h1>
+          <p className="mt-3 text-lg text-white/85">{t("earnings_desc")}</p>
         </div>
       </section>
 
@@ -83,19 +82,19 @@ export default function ProEarningsPage() {
               {summaryCards.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div key={card.title} className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+                  <div key={card.titleKey} className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
                     <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-md`}>
                       <Icon className="h-7 w-7" />
                     </div>
                     <div className="text-3xl font-extrabold text-slate-900">{card.value}</div>
-                    <div className="mt-2 text-lg text-slate-500">{card.title}</div>
+                    <div className="mt-2 text-lg text-slate-500">{t(card.titleKey)}</div>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          {/* Completed jobs / transactions */}
+          {/* Completed jobs */}
           <section className="mx-auto max-w-5xl px-5 pt-8">
             <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center gap-3">
@@ -103,13 +102,13 @@ export default function ProEarningsPage() {
                   <CalendarDays className="h-7 w-7" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-900">Completed Jobs</h2>
-                  <p className="text-lg text-slate-500">All jobs you have finished.</p>
+                  <h2 className="text-3xl font-bold text-slate-900">{t("completed_jobs_label")}</h2>
+                  <p className="text-lg text-slate-500">{t("all_finished_jobs")}</p>
                 </div>
               </div>
 
               {completed.length === 0 ? (
-                <p className="py-8 text-center text-xl text-slate-400">No completed jobs yet.</p>
+                <p className="py-8 text-center text-xl text-slate-400">{t("no_completed_yet")}</p>
               ) : (
                 <div className="space-y-4">
                   {completed.map((b) => (
@@ -125,7 +124,7 @@ export default function ProEarningsPage() {
                           <DollarSign className="h-5 w-5" />{b.price}/hr
                         </div>
                         <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">
-                          Completed
+                          {t("completed")}
                         </span>
                       </div>
                     </div>
@@ -144,8 +143,8 @@ export default function ProEarningsPage() {
                     <Clock3 className="h-7 w-7" />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Active Jobs</h2>
-                    <p className="text-lg text-slate-500">Accepted jobs not yet marked complete.</p>
+                    <h2 className="text-3xl font-bold text-slate-900">{t("active_jobs")}</h2>
+                    <p className="text-lg text-slate-500">{t("active_jobs_desc")}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -162,7 +161,7 @@ export default function ProEarningsPage() {
                           <DollarSign className="h-5 w-5" />{b.price}/hr
                         </div>
                         <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700">
-                          Pending Payout
+                          {t("pending_payout")}
                         </span>
                       </div>
                     </div>

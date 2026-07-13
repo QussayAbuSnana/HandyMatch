@@ -8,9 +8,11 @@ import { useAuth } from "@/lib/auth-context";
 import { updateUserProfile } from "@/lib/firestore";
 import { uploadProfilePhoto } from "@/lib/storage";
 import { updateProfile } from "firebase/auth";
+import { useLanguage } from "@/lib/language-context";
 
 export default function EditProfilePage() {
   const { user, userProfile, refreshProfile } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,11 +35,10 @@ export default function EditProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!displayName.trim()) { setError("Name is required."); return; }
+    if (!displayName.trim()) { setError(t("name_required")); return; }
     setError("");
     setSaving(true);
 
-    // Step 1: Always save text fields first (name, phone, location)
     try {
       await updateProfile(user, { displayName: displayName.trim() });
       await updateUserProfile(user.uid, {
@@ -46,17 +47,17 @@ export default function EditProfilePage() {
         location: location.trim(),
       });
     } catch {
-      setError("Failed to save profile details. Please try again.");
+      setError(t("save_profile_failed"));
       setSaving(false);
       return;
     }
 
-    // Step 2: Try to upload photo — show a separate error if it fails
     if (photoFile) {
       try {
         await uploadProfilePhoto(user, photoFile);
-      } catch {
-        setError("Profile details saved, but photo upload failed. Check Firebase Storage rules.");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Photo upload failed: ${msg}`);
         await refreshProfile();
         setSaving(false);
         return;
@@ -76,12 +77,11 @@ export default function EditProfilePage() {
           <Link href="/profile" className="text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-8 w-8" />
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Edit Profile</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("edit_profile_title")}</h1>
         </div>
       </header>
 
       <section className="mx-auto max-w-lg px-5 pt-8">
-        {/* Avatar with photo picker */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="relative">
             <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-5xl font-bold shadow-lg overflow-hidden">
@@ -102,7 +102,7 @@ export default function EditProfilePage() {
             onClick={() => fileInputRef.current?.click()}
             className="text-sm font-semibold text-violet-600 hover:underline"
           >
-            Change photo
+            {t("change_photo")}
           </button>
           <input
             ref={fileInputRef}
@@ -114,24 +114,23 @@ export default function EditProfilePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Name */}
           <div>
             <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
-              <User className="inline h-4 w-4 mr-1" />Full Name
+              <User className="inline h-4 w-4 mr-1" />{t("full_name")}
             </label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your full name"
+              placeholder={t("your_full_name_ph")}
+              dir="auto"
               className="w-full px-5 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 text-lg"
             />
           </div>
 
-          {/* Email (read-only) */}
           <div>
             <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
-              <Mail className="inline h-4 w-4 mr-1" />Email
+              <Mail className="inline h-4 w-4 mr-1" />{t("email")}
             </label>
             <input
               type="email"
@@ -139,13 +138,12 @@ export default function EditProfilePage() {
               disabled
               className="w-full px-5 py-4 bg-gray-100 border border-transparent rounded-2xl text-gray-400 text-lg cursor-not-allowed"
             />
-            <p className="text-sm text-slate-400 ml-1 mt-1">Email cannot be changed here.</p>
+            <p className="text-sm text-slate-400 ml-1 mt-1">{t("email_no_change")}</p>
           </div>
 
-          {/* Phone */}
           <div>
             <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
-              <Phone className="inline h-4 w-4 mr-1" />Phone
+              <Phone className="inline h-4 w-4 mr-1" />{t("phone")}
             </label>
             <input
               type="tel"
@@ -156,16 +154,16 @@ export default function EditProfilePage() {
             />
           </div>
 
-          {/* Location */}
           <div>
             <label className="text-sm font-semibold text-gray-600 ml-1 block mb-2">
-              <MapPin className="inline h-4 w-4 mr-1" />Location
+              <MapPin className="inline h-4 w-4 mr-1" />{t("location")}
             </label>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="City, State"
+              placeholder={t("city_state_ph")}
+              dir="auto"
               className="w-full px-5 py-4 bg-gray-50 border border-transparent rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none text-gray-700 text-lg"
             />
           </div>
@@ -176,7 +174,7 @@ export default function EditProfilePage() {
 
           {saved && (
             <p className="text-sm text-green-700 bg-green-50 rounded-xl px-4 py-3 text-center font-semibold">
-              Saved! Redirecting…
+              {t("saved_redirecting")}
             </p>
           )}
 
@@ -186,7 +184,7 @@ export default function EditProfilePage() {
             className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white text-xl font-bold shadow-md hover:opacity-95 transition disabled:opacity-60"
           >
             <Save className="h-6 w-6" />
-            {saving ? "Saving…" : "Save Changes"}
+            {saving ? t("saving") : t("save_changes")}
           </button>
         </form>
       </section>
